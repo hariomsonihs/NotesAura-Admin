@@ -1,0 +1,252 @@
+import { db } from './firebase-config.js';
+import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+let allUsers = [];
+let editingUserId = null;
+
+// Load Users
+async function loadUsers() {
+    try {
+        const snapshot = await getDocs(collection(db, 'users'));
+        allUsers = [];
+        snapshot.forEach(doc => {
+            allUsers.push({ id: doc.id, ...doc.data() });
+        });
+        displayUsers(allUsers);
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+// Display Users
+function displayUsers(users) {
+    const tbody = document.getElementById('usersTable');
+    tbody.innerHTML = '';
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No users found</td></tr>';
+        return;
+    }
+    
+    users.forEach(async user => {
+        const tr = document.createElement('tr');
+        const joinedDate = user.joinDate ? new Date(user.joinDate.seconds * 1000).toLocaleDateString() : 'N/A';
+        
+        tr.innerHTML = `
+            <td>
+                <strong>${user.name || 'Unknown'}</strong>
+                ${user.admin === 'yes' ? '<span class="badge bg-danger ms-1">Admin</span>' : ''}
+            </td>
+            <td>${user.email}</td>
+            <td>${user.phone || 'N/A'}</td>
+            <td>${user.premium ? '<span class="badge bg-warning">Premium</span>' : '<span class="badge bg-secondary">Free</span>'}</td>
+            <td id="count-${user.uid}"><span class="spinner-border spinner-border-sm"></span></td>
+            <td>${user.totalProgress || 0}%</td>
+            <td>${joinedDate}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="viewUser('${user.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" onclick="editUser('${user.id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        
+        // Load count async
+        try {
+            const enrolledSnapshot = await getDocs(collection(db, 'users', user.uid, 'enrolledCourses'));
+            const countCell = document.getElementById(`count-${user.uid}`);
+            if (countCell) {
+                countCell.innerHTML = `<strong>${enrolledSnapshot.size}</strong> courses`;
+            }
+        } catch (e) {
+            const countCell = document.getElementById(`count-${user.uid}`);
+            if (countCell) {
+                countCell.innerHTML = '0 courses';
+            }
+        }
+    });
+}
+
+// View User Details
+window.viewUser = async function(userId) {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        const user = userDoc.data();
+        
+        const joinedDate = user.joinDate ? new Date(user.joinDate.seconds * 1000).toLocaleString() : 'N/A';
+        
+        // Load enrolledCourses subcollection
+        let coursesHtml = '<p class="text-muted">No courses enrolled</p>';
+        try {
+            const enrolledCoursesSnapshot = await getDocs(collection(db, 'users', userId, 'enrolledCourses'));
+            
+            if (!enrolledCoursesSnapshot.empty) {
+                coursesHtml = '<div class="list-group">';
+                enrolledCoursesSnapshot.forEach(doc => {
+                    const course = doc.data();
+                    const enrollDate = course.enrollmentDate?.seconds ? new Date(course.enrollmentDate.seconds * 1000).toLocaleDateString() : 'N/A';
+                    const lastAccessed = course.lastAccessed?.seconds ? new Date(course.lastAccessed.seconds * 1000).toLocaleDateString() : 'N/A';
+                    const completedCount = Array.isArray(course.completedExercises) ? course.completedExercises.length : 0;
+                    coursesHtml += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${course.courseName || doc.id}</strong>
+                                    <span class="badge bg-primary ms-2">${course.progressPercentage || 0}%</span>
+                                    <br>
+                                    <small class="text-muted">Category: ${course.category || 'N/A'}</small><br>
+                                    <small class="text-muted">Completed: ${completedCount} exercises</small><br>
+                                    <small class="text-muted">Enrolled: ${enrollDate}</small><br>
+                                    <small class="text-muted">Last accessed: ${lastAccessed}</small><br>
+                                    <small class="text-muted">Payment: ${course.paymentStatus || 'N/A'} (₹${course.amountPaid || 0})</small>
+                                </div>
+                                <button class="btn btn-sm btn-danger" onclick="removeCourse('${userId}', '${doc.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                coursesHtml += '</div>';
+            }
+        } catch (error) {
+            console.error('Error loading enrolledCourses:', error);
+        }
+        
+        // Load payments subcollection
+        let paymentsHtml = '<p class="text-muted">No payments</p>';
+        try {
+            const paymentsSnapshot = await getDocs(collection(db, 'users', userId, 'payments'));
+            
+            if (!paymentsSnapshot.empty) {
+                paymentsHtml = '<div class="list-group">';
+                paymentsSnapshot.forEach(doc => {
+                    const payment = doc.data();
+                    const paymentDate = payment.paymentDate?.seconds ? new Date(payment.paymentDate.seconds * 1000).toLocaleString() : 'N/A';
+                    const statusBadge = payment.status === 'SUCCESS' ? 'bg-success' : payment.status === 'PENDING' ? 'bg-warning' : 'bg-danger';
+                    paymentsHtml += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>${payment.courseTitle || 'N/A'}</strong>
+                                <span class="badge ${statusBadge}">${payment.status}</span>
+                            </div>
+                            <small class="text-muted">Amount: ₹${payment.amount || 0}</small><br>
+                            <small class="text-muted">Transaction ID: ${payment.transactionId || doc.id}</small><br>
+                            <small class="text-muted">Date: ${paymentDate}</small>
+                        </div>
+                    `;
+                });
+                paymentsHtml += '</div>';
+            }
+        } catch (error) {
+            console.error('Error loading payments:', error);
+        }
+        
+        const details = document.getElementById('userDetails');
+        details.innerHTML = `
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Personal Info</h6>
+                    <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                    <p><strong>UID:</strong> ${user.uid || userId}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Account Info</h6>
+                    <p><strong>Admin:</strong> ${user.admin === 'yes' ? '<span class="badge bg-danger">Yes</span>' : 'No'}</p>
+                    <p><strong>Premium:</strong> ${user.premium ? '<span class="badge bg-warning">Yes</span>' : 'No'}</p>
+                    <p><strong>Total Progress:</strong> ${user.totalProgress || 0}%</p>
+                    <p><strong>Joined:</strong> ${joinedDate}</p>
+                </div>
+            </div>
+            <hr>
+            <h6>Enrolled Courses</h6>
+            ${coursesHtml}
+            <hr class="mt-3">
+            <h6>Payment History</h6>
+            ${paymentsHtml}
+        `;
+        
+        new bootstrap.Modal(document.getElementById('userModal')).show();
+    } catch (error) {
+        console.error('Error loading user details:', error);
+    }
+}
+
+// Edit User
+window.editUser = async function(userId) {
+    editingUserId = userId;
+    const user = allUsers.find(u => u.id === userId);
+    
+    document.getElementById('editUserName').value = user.name || '';
+    document.getElementById('editUserPhone').value = user.phone || '';
+    document.getElementById('editUserAdmin').value = user.admin || 'no';
+    document.getElementById('editUserPremium').checked = user.premium || false;
+    
+    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
+// Save User
+window.saveUser = async function() {
+    try {
+        await updateDoc(doc(db, 'users', editingUserId), {
+            name: document.getElementById('editUserName').value,
+            phone: document.getElementById('editUserPhone').value,
+            admin: document.getElementById('editUserAdmin').value,
+            premium: document.getElementById('editUserPremium').checked
+        });
+        
+        bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+        loadUsers();
+    } catch (error) {
+        console.error('Error updating user:', error);
+        alert('Error updating user');
+    }
+}
+
+// Delete User
+window.deleteUser = async function(userId) {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    
+    try {
+        await deleteDoc(doc(db, 'users', userId));
+        loadUsers();
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Error deleting user');
+    }
+}
+
+// Remove Course from User
+window.removeCourse = async function(userId, courseId) {
+    if (!confirm('Remove this course from user?')) return;
+    
+    try {
+        await deleteDoc(doc(db, 'users', userId, 'enrolledCourses', courseId));
+        alert('Course removed successfully');
+        viewUser(userId);
+    } catch (error) {
+        console.error('Error removing course:', error);
+        alert('Error removing course');
+    }
+}
+
+// Search Users
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    const search = e.target.value.toLowerCase();
+    const filtered = allUsers.filter(user => 
+        (user.name && user.name.toLowerCase().includes(search)) ||
+        user.email.toLowerCase().includes(search)
+    );
+    displayUsers(filtered);
+});
+
+// Initialize
+loadUsers();
