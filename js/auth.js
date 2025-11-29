@@ -1,10 +1,43 @@
-import { auth } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-// Check if user is already logged in
-onAuthStateChanged(auth, (user) => {
-    if (user && window.location.pathname.endsWith('index.html')) {
-        window.location.href = 'dashboard.html';
+// Check if user is already logged in and is admin
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // Check if user is admin
+        try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.admin === 'yes') {
+                    // User is admin, allow access
+                    if (window.location.pathname.endsWith('index.html')) {
+                        window.location.href = 'dashboard.html';
+                    }
+                } else {
+                    // User is not admin, logout and redirect to login
+                    if (!window.location.pathname.endsWith('index.html')) {
+                        await signOut(auth);
+                        alert('Access denied. Admin privileges required.');
+                        window.location.href = 'index.html';
+                    }
+                }
+            } else {
+                // User document doesn't exist, logout
+                if (!window.location.pathname.endsWith('index.html')) {
+                    await signOut(auth);
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = 'index.html';
+                }
+            }
+        } catch (error) {
+            console.error('Error checking admin status:', error);
+            if (!window.location.pathname.endsWith('index.html')) {
+                await signOut(auth);
+                window.location.href = 'index.html';
+            }
+        }
     } else if (!user && !window.location.pathname.endsWith('index.html')) {
         window.location.href = 'index.html';
     }
@@ -21,8 +54,28 @@ if (loginForm) {
         const errorMsg = document.getElementById('errorMsg');
         
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            window.location.href = 'dashboard.html';
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            // Check if user is admin
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.admin === 'yes') {
+                    // User is admin, allow login
+                    window.location.href = 'dashboard.html';
+                } else {
+                    // User is not admin, logout and show error
+                    await signOut(auth);
+                    errorMsg.textContent = 'Access denied. Admin privileges required.';
+                    errorMsg.style.display = 'block';
+                }
+            } else {
+                // User document doesn't exist, logout
+                await signOut(auth);
+                errorMsg.textContent = 'Access denied. Admin privileges required.';
+                errorMsg.style.display = 'block';
+            }
         } catch (error) {
             errorMsg.textContent = 'Invalid email or password';
             errorMsg.style.display = 'block';

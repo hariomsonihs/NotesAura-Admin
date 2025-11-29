@@ -222,23 +222,39 @@ window.deleteCourse = async function(courseId) {
     }
 }
 
+// Load Category Filter
+async function loadCategoryFilter() {
+    try {
+        const snapshot = await getDocs(collection(db, 'categories'));
+        const select = document.getElementById('categoryFilter');
+        select.innerHTML = '<option value="">All Categories</option>';
+        
+        snapshot.forEach(doc => {
+            const category = doc.data();
+            const option = document.createElement('option');
+            option.value = category.name;
+            option.textContent = category.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading category filter:', error);
+    }
+}
+
 // Search and Filter
 document.getElementById('searchInput').addEventListener('input', filterCourses);
 document.getElementById('categoryFilter').addEventListener('change', filterCourses);
-document.getElementById('statusFilter').addEventListener('change', filterCourses);
 
 function filterCourses() {
     const search = document.getElementById('searchInput').value.toLowerCase();
     const category = document.getElementById('categoryFilter').value;
-    const status = document.getElementById('statusFilter').value;
     
     let filtered = allCourses.filter(course => {
         const matchSearch = course.title.toLowerCase().includes(search) || 
                           (course.description && course.description.toLowerCase().includes(search));
         const matchCategory = !category || course.category === category;
-        const matchStatus = !status || course.isActive.toString() === status;
         
-        return matchSearch && matchCategory && matchStatus;
+        return matchSearch && matchCategory;
     });
     
     displayCourses(filtered);
@@ -247,3 +263,4 @@ function filterCourses() {
 // Initialize
 loadCourses();
 loadCategoryDropdown();
+loadCategoryFilter();

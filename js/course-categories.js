@@ -124,9 +124,14 @@ window.editCategory = async function(categoryId) {
 
 // Save Category
 window.saveCategory = async function() {
-    const id = document.getElementById('categoryId').value.toLowerCase().replace(/\s+/g, '_');
-    const name = document.getElementById('categoryName').value;
-    const order = parseInt(document.getElementById('categoryOrder').value);
+    const id = document.getElementById('categoryId').value.trim().toLowerCase().replace(/\s+/g, '_');
+    const name = document.getElementById('categoryName').value.trim();
+    const order = parseInt(document.getElementById('categoryOrder').value) || 0;
+    
+    if (!id || !name) {
+        alert('Please fill in all fields');
+        return;
+    }
     
     const categoryData = {
         name: name,
@@ -145,7 +150,7 @@ window.saveCategory = async function() {
         loadCategories();
     } catch (error) {
         console.error('Error saving category:', error);
-        alert('Error saving category');
+        alert('Error saving category: ' + error.message);
     }
 }
 
