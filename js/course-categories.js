@@ -3,6 +3,7 @@ import { collection, getDocs, updateDoc, deleteDoc, doc, setDoc, query, where, s
 
 let editingId = null;
 let exerciseCount = 0;
+let allCategories = [];
 
 // Add Exercise Field
 window.addExerciseField = function() {
@@ -52,6 +53,7 @@ async function loadCategories() {
         });
         
         categories.sort((a, b) => a.order - b.order);
+        allCategories = categories;
         
         // Load course counts for each category
         for (const category of categories) {
@@ -105,6 +107,10 @@ window.openAddCategory = function() {
     document.getElementById('modalTitle').textContent = 'Add Category';
     document.getElementById('categoryForm').reset();
     document.getElementById('categoryId').disabled = false;
+    
+    // Auto-set next order number
+    const nextOrder = allCategories.length;
+    document.getElementById('categoryOrder').value = nextOrder;
 }
 
 // Edit Category
