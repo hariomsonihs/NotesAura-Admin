@@ -234,7 +234,7 @@ async function loadCategoryDropdown() {
         snapshot.forEach(doc => {
             const category = doc.data();
             const option = document.createElement('option');
-            option.value = category.id;
+            option.value = doc.id;
             option.textContent = category.name;
             select.appendChild(option);
         });
