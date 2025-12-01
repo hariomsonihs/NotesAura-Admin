@@ -124,6 +124,7 @@ window.editCategory = async function(categoryId) {
     document.getElementById('categoryId').disabled = true;
     document.getElementById('categoryName').value = category.name;
     document.getElementById('categoryOrder').value = category.order || 0;
+    document.getElementById('categoryImage').value = category.imageUrl || '';
     
     new bootstrap.Modal(document.getElementById('categoryModal')).show();
 }
@@ -141,7 +142,8 @@ window.saveCategory = async function() {
     
     const categoryData = {
         name: name,
-        order: order
+        order: order,
+        imageUrl: document.getElementById('categoryImage').value.trim()
     };
     
     try {
