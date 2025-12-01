@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-book Categories - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="d-flex">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>🎓 NotesAura</h3>
+                <p class="text-muted">Admin Panel</p>
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.html">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="courses.html">
+                        <i class="fas fa-book"></i> Courses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="course-categories.html">
+                        <i class="fas fa-folder"></i> Course Categories
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="ebook-categories.html">
+                        <i class="fas fa-book-open"></i> E-book Categories
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="ebook-subcategories.html">
+                        <i class="fas fa-list"></i> E-book Subcategories
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="ebooks.html">
+                        <i class="fas fa-file-pdf"></i> E-books
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <div class="topbar">
+                <h4>E-book Categories</h4>
+                <div class="user-info">
+                    <span id="userEmail"></span>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                        <i class="fas fa-plus me-2"></i>Add Category
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Order</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Image</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoriesTableBody">
+                            <!-- Categories will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div class="modal fade" id="categoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Add E-book Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId">
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">Category Name</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="categoryDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="categoryDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="categoryImageUrl" class="form-label">Image URL</label>
+                            <input type="url" class="form-control" id="categoryImageUrl">
+                        </div>
+                        <div class="mb-3">
+                            <label for="categoryOrder" class="form-label">Order</label>
+                            <input type="number" class="form-control" id="categoryOrder" min="0">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCategory()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script type="module" src="js/logout.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAT2rsSb2BkWjDW4hzCUn68_1WWSJg0Kks",
+            authDomain: "notesaura-programming-guide.firebaseapp.com",
+            projectId: "notesaura-programming-guide",
+            storageBucket: "notesaura-programming-guide.firebasestorage.app",
+            messagingSenderId: "311926717488",
+            appId: "1:311926717488:web:08ab85935cdc3b1cfe41f5"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+    <script src="js/ebook-categories.js"></script>
+</body>
+</html>

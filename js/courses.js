@@ -59,6 +59,7 @@ function displayCourses(courses) {
                 <div class="mb-2">
                     <span class="course-badge badge-category">${course.category}</span>
                     <span class="course-badge badge-level">${course.difficulty || 'Beginner'}</span>
+                    ${course.featured ? `<span class="course-badge" style="background:#ffd700;color:#000">⭐ Featured</span>` : ''}
                     ${course.rating ? `<span class="course-badge" style="background:#fff3cd;color:#856404">⭐ ${course.rating}</span>` : ''}
                 </div>
                 <small class="text-muted">⏱️ ${course.duration || 0}h | 💰 ${course.price === 0 ? 'Free' : '₹' + course.price} | 📖 ${course.exercises?.length || 0} exercises</small>
@@ -127,6 +128,8 @@ window.editCourse = function(courseId) {
     document.getElementById('coursePrice').value = course.price || 0;
     document.getElementById('courseRating').value = course.rating || 5;
     document.getElementById('courseImage').value = course.imageUrl || '';
+    document.getElementById('courseFeatured').checked = course.featured || false;
+    document.getElementById('featuredOrder').value = course.featuredOrder || 0;
     document.getElementById('courseLearning').value = course.learningObjectives ? course.learningObjectives.join('\n') : '';
     document.getElementById('courseAudience').value = course.targetAudience ? course.targetAudience.join('\n') : '';
     
@@ -187,6 +190,8 @@ window.saveCourse = async function() {
         price: parseInt(document.getElementById('coursePrice').value),
         rating: parseFloat(document.getElementById('courseRating').value),
         imageUrl: document.getElementById('courseImage').value,
+        featured: document.getElementById('courseFeatured').checked,
+        featuredOrder: parseInt(document.getElementById('featuredOrder').value) || 0,
         learningObjectives: learningText ? learningText.split('\n').filter(l => l.trim()) : [],
         targetAudience: audienceText ? audienceText.split('\n').filter(a => a.trim()) : [],
         exercises: exercises,
