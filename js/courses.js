@@ -232,11 +232,7 @@ async function loadCategoryFilter() {
         snapshot.forEach(doc => {
             const category = doc.data();
             const option = document.createElement('option');
-<<<<<<< HEAD
-            option.value = category.name;
-=======
             option.value = doc.id;
->>>>>>> d97ece2 (update in category)
             option.textContent = category.name;
             select.appendChild(option);
         });
