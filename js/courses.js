@@ -1,4 +1,5 @@
 import { db } from './firebase-config.js';
+import { initAuthGuard } from './auth-guard.js';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 let allCourses = [];
@@ -264,6 +265,9 @@ function filterCourses() {
     
     displayCourses(filtered);
 }
+
+// Initialize Auth Guard
+initAuthGuard();
 
 // Initialize
 loadCourses();
