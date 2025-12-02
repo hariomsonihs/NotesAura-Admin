@@ -3,6 +3,26 @@ let categories = [];
 let subcategories = [];
 let editingEbookId = null;
 
+// Send notification function
+async function sendNotification(title, message, type, targetId, imageUrl) {
+    try {
+        const notificationData = {
+            title: title,
+            message: message,
+            type: type,
+            targetId: targetId,
+            imageUrl: imageUrl || '',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            isRead: false
+        };
+        
+        await db.collection('notifications').add(notificationData);
+        console.log('Notification sent successfully');
+    } catch (error) {
+        console.error('Error sending notification:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadCategories();
     loadEbooks();
@@ -173,7 +193,16 @@ function saveEbook() {
 
     const savePromise = editingEbookId 
         ? db.collection('ebooks').doc(editingEbookId).update(ebookData)
-        : db.collection('ebooks').add(ebookData);
+        : db.collection('ebooks').add(ebookData).then(() => {
+            // Send notification for new ebook
+            return sendNotification(
+                'New Ebook Added!',
+                `New ebook available: ${title}`,
+                'ebook',
+                subcategoryId,
+                imageUrl
+            );
+        });
 
     savePromise
         .then(() => {

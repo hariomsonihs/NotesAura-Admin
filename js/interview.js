@@ -4,6 +4,26 @@ import { collection, getDocs, updateDoc, deleteDoc, doc, setDoc, query, where } 
 let currentCategoryId = null;
 let editingId = null;
 
+// Send notification function
+async function sendNotification(title, message, type, targetId, imageUrl) {
+    try {
+        const notificationData = {
+            title: title,
+            message: message,
+            type: type,
+            targetId: targetId,
+            imageUrl: imageUrl || '',
+            timestamp: new Date(),
+            isRead: false
+        };
+        
+        await setDoc(doc(db, 'notifications', Date.now().toString()), notificationData);
+        console.log('Notification sent successfully');
+    } catch (error) {
+        console.error('Error sending notification:', error);
+    }
+}
+
 // Load Categories
 window.loadCategories = async function() {
     const grid = document.getElementById('categoriesGrid');
@@ -235,6 +255,15 @@ window.saveQuestion = async function() {
             const id = Date.now().toString();
             questionData.id = id;
             await setDoc(doc(db, 'interview_questions', id), questionData);
+            
+            // Send notification for new question
+            await sendNotification(
+                'New Interview Question!',
+                `New question added: ${title}`,
+                'interview',
+                categoryId,
+                ''
+            );
         }
         
         bootstrap.Modal.getInstance(document.getElementById('questionModal')).hide();

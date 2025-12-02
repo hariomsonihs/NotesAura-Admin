@@ -2,6 +2,8 @@ import { db } from './firebase-config.js';
 import { initAuthGuard } from './auth-guard.js';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
+
+
 let allCourses = [];
 let editingCourseId = null;
 let exerciseCount = 0;
@@ -204,7 +206,35 @@ window.saveCourse = async function() {
             await updateDoc(doc(db, 'courses', editingCourseId), courseData);
         } else {
             courseData.createdAt = serverTimestamp();
-            await addDoc(collection(db, 'courses'), courseData);
+            const docRef = await addDoc(collection(db, 'courses'), courseData);
+            
+            // Send notification for new course to all users
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            const notificationPromises = [];
+            
+            console.log('Sending notification for course ID:', docRef.id);
+            
+            usersSnapshot.forEach(userDoc => {
+                const notificationData = {
+                    userId: userDoc.id,
+                    title: 'New Course Added!',
+                    message: `Check out the new course: ${courseData.title}`,
+                    type: 'course',
+                    targetId: docRef.id,
+                    imageUrl: courseData.imageUrl || '',
+                    timestamp: Date.now(),
+                    isRead: false
+                };
+                
+                console.log('Notification data:', notificationData);
+                
+                notificationPromises.push(
+                    addDoc(collection(db, 'app_notifications'), notificationData)
+                );
+            });
+            
+            await Promise.all(notificationPromises);
+            console.log(`Course notification sent to ${notificationPromises.length} users`);
         }
         
         bootstrap.Modal.getInstance(document.getElementById('courseModal')).hide();

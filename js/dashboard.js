@@ -21,6 +21,18 @@ async function loadStats() {
         const quizSnapshot = await getDocs(collection(db, 'quiz_categories'));
         document.getElementById('totalQuiz').textContent = quizSnapshot.size;
         
+        // Total Notifications
+        const notificationsSnapshot = await getDocs(collection(db, 'admin_notifications'));
+        document.getElementById('totalNotifications').textContent = notificationsSnapshot.size;
+        
+        // Total E-books
+        const ebooksSnapshot = await getDocs(collection(db, 'ebooks'));
+        document.getElementById('totalEbooks').textContent = ebooksSnapshot.size;
+        
+        // Total Interview Questions
+        const interviewSnapshot = await getDocs(collection(db, 'interview_questions'));
+        document.getElementById('totalInterviews').textContent = interviewSnapshot.size;
+        
     } catch (error) {
         console.error('Error loading stats:', error);
     }
