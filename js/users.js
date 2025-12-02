@@ -1,8 +1,11 @@
 import { db } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initAuthGuard } from './auth-guard.js';
+import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 let allUsers = [];
 let editingUserId = null;
+let addingCourseUserId = null;
+let allCourses = [];
 
 // Load Users
 async function loadUsers() {
@@ -167,7 +170,12 @@ window.viewUser = async function(userId) {
                 </div>
             </div>
             <hr>
-            <h6>Enrolled Courses</h6>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Enrolled Courses</h6>
+                <button class="btn btn-sm btn-success" onclick="showAddCourseModal('${userId}')">
+                    <i class="fas fa-plus me-1"></i>Add Course
+                </button>
+            </div>
             ${coursesHtml}
             <hr class="mt-3">
             <h6>Payment History</h6>
@@ -247,6 +255,98 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
     );
     displayUsers(filtered);
 });
+
+// Show Add Course Modal
+window.showAddCourseModal = async function(userId) {
+    addingCourseUserId = userId;
+    await loadAvailableCourses();
+    new bootstrap.Modal(document.getElementById('addCourseModal')).show();
+}
+
+// Load Available Courses
+async function loadAvailableCourses() {
+    try {
+        const snapshot = await getDocs(collection(db, 'courses'));
+        allCourses = [];
+        snapshot.forEach(doc => {
+            allCourses.push({ id: doc.id, ...doc.data() });
+        });
+        displayCourses(allCourses);
+    } catch (error) {
+        console.error('Error loading courses:', error);
+        document.getElementById('coursesList').innerHTML = '<p class="text-danger">Error loading courses</p>';
+    }
+}
+
+// Display Courses
+function displayCourses(courses) {
+    const coursesList = document.getElementById('coursesList');
+    
+    if (courses.length === 0) {
+        coursesList.innerHTML = '<p class="text-muted">No courses found</p>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    courses.forEach(course => {
+        const price = course.price || 0;
+        const category = course.category || 'General';
+        html += `
+            <div class="list-group-item list-group-item-action" onclick="addCourseToUser('${course.id}', '${course.title}', '${category}', ${price})">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">${course.title}</h6>
+                        <p class="mb-1 text-muted">${course.description || 'No description'}</p>
+                        <small class="text-muted">Category: ${category}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-primary">${price > 0 ? '₹' + price : 'Free'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    coursesList.innerHTML = html;
+}
+
+// Add Course to User
+window.addCourseToUser = async function(courseId, courseName, category, price) {
+    try {
+        const enrollmentData = {
+            courseId: courseId,
+            courseName: courseName,
+            category: category,
+            enrollmentDate: new Date(),
+            progressPercentage: 0,
+            paymentStatus: price > 0 ? 'ADMIN_ADDED' : 'FREE',
+            amountPaid: 0,
+            completedExercises: []
+        };
+        
+        await setDoc(doc(db, 'users', addingCourseUserId, 'enrolledCourses', courseId), enrollmentData);
+        
+        bootstrap.Modal.getInstance(document.getElementById('addCourseModal')).hide();
+        alert('Course added successfully!');
+        viewUser(addingCourseUserId);
+    } catch (error) {
+        console.error('Error adding course:', error);
+        alert('Error adding course');
+    }
+}
+
+// Search Courses
+document.getElementById('courseSearchInput').addEventListener('input', (e) => {
+    const search = e.target.value.toLowerCase();
+    const filtered = allCourses.filter(course => 
+        (course.title && course.title.toLowerCase().includes(search)) ||
+        (course.category && course.category.toLowerCase().includes(search))
+    );
+    displayCourses(filtered);
+});
+
+// Initialize Auth Guard
+initAuthGuard();
 
 // Initialize
 loadUsers();

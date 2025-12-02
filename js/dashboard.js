@@ -1,4 +1,5 @@
 import { db } from './firebase-config.js';
+import { initAuthGuard } from './auth-guard.js';
 import { collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // Load Dashboard Stats
@@ -91,6 +92,9 @@ async function loadRecentUsers() {
         console.error('Error loading recent users:', error);
     }
 }
+
+// Initialize Auth Guard
+initAuthGuard();
 
 // Initialize Dashboard
 loadStats();
