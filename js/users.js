@@ -122,6 +122,89 @@ window.viewUser = async function(userId) {
             console.error('Error loading enrolledCourses:', error);
         }
         
+        // Load bookmarked courses
+        let bookmarksHtml = '<p class="text-muted">No favourite courses</p>';
+        try {
+            const bookmarksDoc = await getDoc(doc(db, 'user_bookmarks', user.uid || userId));
+            
+            if (bookmarksDoc.exists()) {
+                const bookmarkData = bookmarksDoc.data();
+                const bookmarkedCourses = bookmarkData.bookmarkedCourses || [];
+                
+                if (bookmarkedCourses.length > 0) {
+                    // Load course details for bookmarked courses
+                    const coursesSnapshot = await getDocs(collection(db, 'courses'));
+                    const coursesMap = {};
+                    coursesSnapshot.forEach(doc => {
+                        coursesMap[doc.id] = doc.data();
+                    });
+                    
+                    bookmarksHtml = '<div class="list-group">';
+                    bookmarkedCourses.forEach(courseId => {
+                        const course = coursesMap[courseId];
+                        if (course) {
+                            bookmarksHtml += `
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>❤️ ${course.title}</strong>
+                                            <br>
+                                            <small class="text-muted">Category: ${course.category || 'N/A'}</small><br>
+                                            <small class="text-muted">Price: ${course.price > 0 ? '₹' + course.price : 'Free'}</small>
+                                        </div>
+                                        <span class="badge bg-warning">Favourite</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                    bookmarksHtml += '</div>';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading bookmarks:', error);
+        }
+        
+        // Load user ratings
+        let ratingsHtml = '<p class="text-muted">No ratings given</p>';
+        try {
+            const ratingsSnapshot = await getDocs(query(collection(db, 'course_ratings'), where('userId', '==', user.uid || userId)));
+            
+            if (!ratingsSnapshot.empty) {
+                // Load course details for ratings
+                const coursesSnapshot = await getDocs(collection(db, 'courses'));
+                const coursesMap = {};
+                coursesSnapshot.forEach(doc => {
+                    coursesMap[doc.id] = doc.data();
+                });
+                
+                ratingsHtml = '<div class="list-group">';
+                ratingsSnapshot.forEach(doc => {
+                    const rating = doc.data();
+                    const course = coursesMap[rating.courseId];
+                    const ratingDate = rating.timestamp ? new Date(rating.timestamp).toLocaleDateString() : 'N/A';
+                    const stars = '⭐'.repeat(rating.rating || 0);
+                    
+                    ratingsHtml += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${course ? course.title : 'Unknown Course'}</strong>
+                                    <span class="ms-2">${stars} (${rating.rating}/5)</span>
+                                    <br>
+                                    ${rating.comment ? `<small class="text-muted">"${rating.comment}"</small><br>` : ''}
+                                    <small class="text-muted">Rated on: ${ratingDate}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                ratingsHtml += '</div>';
+            }
+        } catch (error) {
+            console.error('Error loading ratings:', error);
+        }
+        
         // Load payments subcollection
         let paymentsHtml = '<p class="text-muted">No payments</p>';
         try {
@@ -177,6 +260,12 @@ window.viewUser = async function(userId) {
                 </button>
             </div>
             ${coursesHtml}
+            <hr class="mt-3">
+            <h6>❤️ Favourite Courses</h6>
+            ${bookmarksHtml}
+            <hr class="mt-3">
+            <h6>⭐ Course Ratings</h6>
+            ${ratingsHtml}
             <hr class="mt-3">
             <h6>Payment History</h6>
             ${paymentsHtml}

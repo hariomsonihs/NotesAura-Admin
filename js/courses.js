@@ -86,6 +86,9 @@ function displayCourses(courses) {
                         `<button class="btn btn-sm btn-warning" onclick="quickFixOrder('${course.id}')">
                             <i class="fas fa-magic"></i> Fix Order
                         </button>` : ''}
+                    <button class="btn btn-sm btn-info" onclick="viewCourseRatings('${course.id}')">
+                        <i class="fas fa-star"></i> Ratings
+                    </button>
                     <button class="btn btn-sm btn-primary" onclick="editCourse('${course.id}')">
                         <i class="fas fa-edit"></i> Edit
                     </button>
@@ -530,6 +533,90 @@ window.showOrderSummary = function() {
 
 // Initialize Auth Guard
 initAuthGuard();
+
+// View Course Ratings
+window.viewCourseRatings = async function(courseId) {
+    try {
+        const course = allCourses.find(c => c.id === courseId);
+        const ratingsSnapshot = await getDocs(collection(db, 'course_ratings'));
+        
+        let courseRatings = [];
+        ratingsSnapshot.forEach(doc => {
+            const rating = doc.data();
+            if (rating.courseId === courseId) {
+                courseRatings.push(rating);
+            }
+        });
+        
+        // Sort by timestamp (newest first)
+        courseRatings.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        
+        let ratingsHtml = '<p class="text-muted">No ratings yet</p>';
+        
+        if (courseRatings.length > 0) {
+            const avgRating = (courseRatings.reduce((sum, r) => sum + (r.rating || 0), 0) / courseRatings.length).toFixed(1);
+            
+            ratingsHtml = `
+                <div class="mb-3">
+                    <h6>Average Rating: <span class="badge bg-warning">${'⭐'.repeat(Math.round(avgRating))} ${avgRating}/5</span></h6>
+                    <small class="text-muted">Based on ${courseRatings.length} rating(s)</small>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+            `;
+            
+            courseRatings.forEach(rating => {
+                const ratingDate = rating.timestamp ? new Date(rating.timestamp).toLocaleDateString() : 'N/A';
+                const stars = '⭐'.repeat(rating.rating || 0);
+                
+                ratingsHtml += `
+                    <div class="card mb-2">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>${rating.userName || 'Anonymous'}</strong>
+                                <span class="badge bg-primary">${stars} ${rating.rating}/5</span>
+                            </div>
+                            ${rating.comment ? `<p class="mb-1">${rating.comment}</p>` : ''}
+                            <small class="text-muted">Rated on: ${ratingDate}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            ratingsHtml += '</div>';
+        }
+        
+        // Show in modal
+        const modalHtml = `
+            <div class="modal fade" id="ratingsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">⭐ Ratings for ${course ? course.title : 'Course'}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">${ratingsHtml}</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('ratingsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        new bootstrap.Modal(document.getElementById('ratingsModal')).show();
+        
+    } catch (error) {
+        console.error('Error loading ratings:', error);
+        alert('Error loading ratings');
+    }
+}
 
 // Initialize
 loadCourses();
