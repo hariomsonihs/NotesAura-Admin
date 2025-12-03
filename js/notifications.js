@@ -221,10 +221,16 @@ async function sendCustomNotification() {
             title,
             message,
             type: 'custom',
-            icon: icon || 'https://via.placeholder.com/64x64/007bff/ffffff?text=N',
-            actionUrl: actionUrl || null,
-            timestamp: serverTimestamp(),
-            isRead: false
+            imageUrl: icon || null,
+            targetId: actionUrl || null,
+            timestamp: Date.now(),
+            isRead: false,
+            data: {
+                fullMessage: message,
+                actionUrl: actionUrl || null,
+                sentBy: auth.currentUser.email,
+                sentAt: new Date().toISOString()
+            }
         };
 
         if (recipientType === 'all') {
@@ -234,6 +240,11 @@ async function sendCustomNotification() {
                     ...appNotificationData,
                     userId: user.id
                 });
+                
+                // Trigger FCM notification
+                if (user.fcmToken) {
+                    await sendFCMNotification(user.fcmToken, title, message, 'custom', actionUrl);
+                }
             }
         } else {
             // Send to specific user
@@ -241,6 +252,12 @@ async function sendCustomNotification() {
                 ...appNotificationData,
                 userId: specificUser
             });
+            
+            // Trigger FCM notification
+            const selectedUser = allUsers.find(u => u.id === specificUser);
+            if (selectedUser && selectedUser.fcmToken) {
+                await sendFCMNotification(selectedUser.fcmToken, title, message, 'custom', actionUrl);
+            }
         }
 
         // Also add to old notifications collection for backward compatibility
@@ -377,7 +394,43 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('filterType').addEventListener('change', loadNotifications);
 });
 
+// Send FCM notification
+async function sendFCMNotification(fcmToken, title, message, type, actionUrl) {
+    try {
+        // Create FCM notification payload
+        const fcmPayload = {
+            to: fcmToken,
+            notification: {
+                title: title,
+                body: message,
+                icon: '/android-chrome-192x192.png',
+                click_action: 'FLUTTER_NOTIFICATION_CLICK'
+            },
+            data: {
+                type: type || 'custom',
+                targetId: actionUrl || '',
+                title: title,
+                message: message
+            }
+        };
+        
+        // Send via Firebase Cloud Functions or direct FCM API
+        // For now, we'll trigger a Firestore document that Cloud Functions can listen to
+        await addDoc(collection(db, 'fcm_queue'), {
+            token: fcmToken,
+            payload: fcmPayload,
+            timestamp: Date.now(),
+            processed: false
+        });
+        
+        console.log('FCM notification queued for token:', fcmToken.substring(0, 20) + '...');
+    } catch (error) {
+        console.error('Error sending FCM notification:', error);
+    }
+}
+
 // Make functions globally available
 window.sendCustomNotification = sendCustomNotification;
 window.viewNotificationDetails = viewNotificationDetails;
 window.loadNotifications = loadNotifications;
+window.sendFCMNotification = sendFCMNotification;
