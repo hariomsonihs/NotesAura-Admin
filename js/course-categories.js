@@ -200,8 +200,22 @@ window.viewCourses = async function(categoryId, categoryName) {
             return;
         }
         
+        // Sort courses by order, then by title
+        const courses = [];
         snapshot.forEach(doc => {
-            const course = doc.data();
+            courses.push({ id: doc.id, ...doc.data() });
+        });
+        
+        courses.sort((a, b) => {
+            const orderA = a.categoryOrder || 0;
+            const orderB = b.categoryOrder || 0;
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            return a.title.localeCompare(b.title);
+        });
+        
+        courses.forEach(course => {
             const col = document.createElement('div');
             col.className = 'col-md-6 col-lg-4';
             col.innerHTML = `
@@ -213,12 +227,12 @@ window.viewCourses = async function(categoryId, categoryName) {
                         <span class="course-badge badge-level">${course.difficulty || 'Beginner'}</span>
                         ${course.rating ? `<span class="course-badge" style="background:#fff3cd;color:#856404">⭐ ${course.rating}</span>` : ''}
                     </div>
-                    <small class="text-muted">⏱️ ${course.duration || 0}h | 💰 ${course.price === 0 ? 'Free' : '₹' + course.price} | 📖 ${course.exercises?.length || 0} exercises</small>
+                    <small class="text-muted">⏱️ ${course.duration || 0}h | 💰 ${course.price === 0 ? 'Free' : '₹' + course.price} | 📖 ${course.exercises?.length || 0} exercises | Category Order: ${course.categoryOrder || 0}</small>
                     <div class="course-actions mt-2">
-                        <button class="btn btn-sm btn-warning" onclick="editCourse('${doc.id}')">
+                        <button class="btn btn-sm btn-warning" onclick="editCourse('${course.id}')">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteCourse('${doc.id}')">
+                        <button class="btn btn-sm btn-danger" onclick="deleteCourse('${course.id}')">
                             <i class="fas fa-trash"></i> Delete
                         </button>
                     </div>

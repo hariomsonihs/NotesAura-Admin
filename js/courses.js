@@ -22,6 +22,9 @@ async function loadCategoryDropdown() {
             option.textContent = category.name;
             select.appendChild(option);
         });
+        
+        // Add change listener to update order info
+        select.addEventListener('change', updateOrderInfo);
     } catch (error) {
         console.error('Error loading categories:', error);
     }
@@ -51,6 +54,16 @@ function displayCourses(courses) {
         return;
     }
     
+    // Sort courses by global order, then by title
+    courses.sort((a, b) => {
+        const globalOrderA = a.globalOrder || 0;
+        const globalOrderB = b.globalOrder || 0;
+        if (globalOrderA !== globalOrderB) {
+            return globalOrderA - globalOrderB;
+        }
+        return a.title.localeCompare(b.title);
+    });
+    
     courses.forEach(course => {
         const col = document.createElement('div');
         col.className = 'col-md-6 col-lg-4';
@@ -64,9 +77,15 @@ function displayCourses(courses) {
                     <span class="course-badge badge-level">${course.difficulty || 'Beginner'}</span>
                     ${course.featured ? `<span class="course-badge" style="background:#ffd700;color:#000">⭐ Featured</span>` : ''}
                     ${course.rating ? `<span class="course-badge" style="background:#fff3cd;color:#856404">⭐ ${course.rating}</span>` : ''}
+                    <span class="course-badge" style="background:#e9ecef;color:#495057">Global: ${course.globalOrder || course.order || 0}</span>
+                    <span class="course-badge" style="background:#f8f9fa;color:#495057">Category: ${course.categoryOrder || course.order || 0}</span>
                 </div>
                 <small class="text-muted">⏱️ ${course.duration || 0}h | 💰 ${course.price === 0 ? 'Free' : '₹' + course.price} | 📖 ${course.exercises?.length || 0} exercises</small>
                 <div class="course-actions">
+                    ${(course.globalOrder === 0 && course.categoryOrder === 0) ? 
+                        `<button class="btn btn-sm btn-warning" onclick="quickFixOrder('${course.id}')">
+                            <i class="fas fa-magic"></i> Fix Order
+                        </button>` : ''}
                     <button class="btn btn-sm btn-primary" onclick="editCourse('${course.id}')">
                         <i class="fas fa-edit"></i> Edit
                     </button>
@@ -115,6 +134,32 @@ window.openAddCourse = function() {
     document.getElementById('modalTitle').textContent = 'Add Course';
     document.getElementById('courseForm').reset();
     document.getElementById('exercisesList').innerHTML = '';
+    
+    // Auto-fill with next available orders
+    setTimeout(() => {
+        autoFillOrders();
+    }, 100);
+}
+
+// Quick fix for zero orders
+window.quickFixOrder = function(courseId) {
+    const course = allCourses.find(c => c.id === courseId);
+    if (!course) return;
+    
+    const globalOrder = allCourses.length;
+    const categoryOrder = allCourses.filter(c => c.category === course.category).length;
+    
+    const updateData = {
+        globalOrder: globalOrder,
+        categoryOrder: categoryOrder
+    };
+    
+    updateDoc(doc(db, 'courses', courseId), updateData)
+        .then(() => {
+            console.log(`Fixed orders for ${course.title}`);
+            loadCourses();
+        })
+        .catch(error => console.error('Error fixing order:', error));
 }
 
 // Edit Course
@@ -133,6 +178,13 @@ window.editCourse = function(courseId) {
     document.getElementById('courseImage').value = course.imageUrl || '';
     document.getElementById('courseFeatured').checked = course.featured || false;
     document.getElementById('featuredOrder').value = course.featuredOrder || 0;
+    document.getElementById('globalOrder').value = course.globalOrder || course.order || 0;
+    document.getElementById('categoryOrder').value = course.categoryOrder || course.order || 0;
+    
+    // Update order info after loading values
+    setTimeout(() => {
+        updateOrderInfo();
+    }, 100);
     document.getElementById('courseLearning').value = course.learningObjectives ? course.learningObjectives.join('\n') : '';
     document.getElementById('courseAudience').value = course.targetAudience ? course.targetAudience.join('\n') : '';
     
@@ -184,6 +236,9 @@ window.saveCourse = async function() {
         if (Object.keys(exercise).length > 0) exercises.push(exercise);
     });
     
+    const globalOrder = parseInt(document.getElementById('globalOrder').value) || 0;
+    const categoryOrder = parseInt(document.getElementById('categoryOrder').value) || 0;
+    
     const courseData = {
         title: document.getElementById('courseTitle').value,
         description: document.getElementById('courseDescription').value,
@@ -195,11 +250,20 @@ window.saveCourse = async function() {
         imageUrl: document.getElementById('courseImage').value,
         featured: document.getElementById('courseFeatured').checked,
         featuredOrder: parseInt(document.getElementById('featuredOrder').value) || 0,
+        globalOrder: globalOrder,
+        categoryOrder: categoryOrder,
         learningObjectives: learningText ? learningText.split('\n').filter(l => l.trim()) : [],
         targetAudience: audienceText ? audienceText.split('\n').filter(a => a.trim()) : [],
         exercises: exercises,
         updatedAt: serverTimestamp()
     };
+    
+    console.log('Saving course with orders:', {
+        title: courseData.title,
+        globalOrder: globalOrder,
+        categoryOrder: categoryOrder,
+        category: courseData.category
+    });
     
     try {
         if (editingCourseId) {
@@ -294,6 +358,174 @@ function filterCourses() {
     });
     
     displayCourses(filtered);
+}
+
+// Auto-fill Orders
+window.autoFillOrders = async function() {
+    const category = document.getElementById('courseCategory').value;
+    if (!category) {
+        alert('Please select a category first');
+        return;
+    }
+    
+    try {
+        // Get highest global order + 1
+        const maxGlobalOrder = Math.max(...allCourses.map(c => c.globalOrder || 0), -1);
+        document.getElementById('globalOrder').value = maxGlobalOrder + 1;
+        
+        // Get highest category order + 1 for this category
+        const categoryCoursesOrders = allCourses
+            .filter(c => c.category === category)
+            .map(c => c.categoryOrder || 0);
+        const maxCategoryOrder = Math.max(...categoryCoursesOrders, -1);
+        document.getElementById('categoryOrder').value = maxCategoryOrder + 1;
+        
+        // Update order info
+        updateOrderInfo();
+        
+        console.log('Auto-filled orders:', {
+            category: category,
+            globalOrder: maxGlobalOrder + 1,
+            categoryOrder: maxCategoryOrder + 1
+        });
+        
+    } catch (error) {
+        console.error('Error auto-filling orders:', error);
+    }
+}
+
+// Migrate existing courses to new ordering system
+window.migrateOrderingSystem = async function() {
+    if (!confirm('This will assign sequential order numbers to all courses. Continue?')) return;
+    
+    try {
+        const snapshot = await getDocs(collection(db, 'courses'));
+        const courses = [];
+        
+        // Collect all courses
+        snapshot.forEach(doc => {
+            courses.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Sort by title for consistent ordering
+        courses.sort((a, b) => a.title.localeCompare(b.title));
+        
+        // Group by category for category ordering
+        const categoryGroups = {};
+        courses.forEach(course => {
+            if (!categoryGroups[course.category]) {
+                categoryGroups[course.category] = [];
+            }
+            categoryGroups[course.category].push(course);
+        });
+        
+        const updatePromises = [];
+        let globalOrderCounter = 0;
+        
+        // Assign orders
+        courses.forEach((course, index) => {
+            const categoryOrder = categoryGroups[course.category].indexOf(course);
+            
+            const updateData = {
+                globalOrder: globalOrderCounter++,
+                categoryOrder: categoryOrder
+            };
+            
+            console.log(`${course.title}: Global=${updateData.globalOrder}, Category=${updateData.categoryOrder}`);
+            updatePromises.push(updateDoc(doc(db, 'courses', course.id), updateData));
+        });
+        
+        await Promise.all(updatePromises);
+        alert(`Updated ${updatePromises.length} courses with sequential ordering`);
+        loadCourses();
+    } catch (error) {
+        console.error('Migration error:', error);
+        alert('Migration failed: ' + error.message);
+    }
+}
+
+// Update Order Info
+window.updateOrderInfo = function() {
+    const globalOrder = parseInt(document.getElementById('globalOrder').value) || 0;
+    const categoryOrder = parseInt(document.getElementById('categoryOrder').value) || 0;
+    const category = document.getElementById('courseCategory').value;
+    
+    // Check global order availability
+    const globalOrderTaken = allCourses.find(c => c.globalOrder === globalOrder && c.id !== editingCourseId);
+    const globalInfo = document.getElementById('globalOrderInfo');
+    if (globalOrderTaken) {
+        globalInfo.innerHTML = `<small class="text-danger">⚠️ Used by: ${globalOrderTaken.title}</small>`;
+    } else {
+        globalInfo.innerHTML = `<small class="text-success">✅ Available</small>`;
+    }
+    
+    // Check category order availability
+    if (category) {
+        const categoryOrderTaken = allCourses.find(c => 
+            c.categoryOrder === categoryOrder && 
+            c.category === category && 
+            c.id !== editingCourseId
+        );
+        const categoryInfo = document.getElementById('categoryOrderInfo');
+        if (categoryOrderTaken) {
+            categoryInfo.innerHTML = `<small class="text-danger">⚠️ Used by: ${categoryOrderTaken.title}</small>`;
+        } else {
+            categoryInfo.innerHTML = `<small class="text-success">✅ Available</small>`;
+        }
+    }
+}
+
+// Show Order Summary
+window.showOrderSummary = function() {
+    const category = document.getElementById('courseCategory').value;
+    
+    let summary = '<div class="row">';
+    
+    // Global orders
+    const globalOrders = allCourses.map(c => ({ order: c.globalOrder, title: c.title })).sort((a, b) => a.order - b.order);
+    summary += '<div class="col-md-6"><h6>🌐 Global Orders:</h6><ul class="list-unstyled" style="max-height:200px;overflow-y:auto;">';
+    globalOrders.forEach(item => {
+        summary += `<li><span class="badge bg-primary">${item.order}</span> ${item.title}</li>`;
+    });
+    summary += '</ul></div>';
+    
+    // Category orders
+    if (category) {
+        const categoryOrders = allCourses
+            .filter(c => c.category === category)
+            .map(c => ({ order: c.categoryOrder, title: c.title }))
+            .sort((a, b) => a.order - b.order);
+        summary += `<div class="col-md-6"><h6>📋 ${category} Orders:</h6><ul class="list-unstyled" style="max-height:200px;overflow-y:auto;">`;
+        categoryOrders.forEach(item => {
+            summary += `<li><span class="badge bg-secondary">${item.order}</span> ${item.title}</li>`;
+        });
+        summary += '</ul></div>';
+    } else {
+        summary += '<div class="col-md-6"><p class="text-muted">Select a category to see category orders</p></div>';
+    }
+    
+    summary += '</div>';
+    
+    // Show in alert
+    const alertDiv = document.createElement('div');
+    alertDiv.innerHTML = `
+        <div class="modal fade" id="orderSummaryModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">📊 Order Summary</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">${summary}</div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(alertDiv);
+    new bootstrap.Modal(document.getElementById('orderSummaryModal')).show();
 }
 
 // Initialize Auth Guard

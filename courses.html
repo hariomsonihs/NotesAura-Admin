@@ -82,9 +82,14 @@
         <div class="main-content">
             <div class="topbar">
                 <h4>Course Management</h4>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal" onclick="openAddCourse()">
-                    <i class="fas fa-plus me-2"></i>Add Course
-                </button>
+                <div>
+                    <button class="btn btn-warning me-2" onclick="migrateOrderingSystem()">
+                        <i class="fas fa-sort-numeric-down me-2"></i>Fix All Orders
+                    </button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal" onclick="openAddCourse()">
+                        <i class="fas fa-plus me-2"></i>Add Course
+                    </button>
+                </div>
             </div>
 
             <div class="content-area">
@@ -162,7 +167,7 @@
                             <input type="url" class="form-control" id="courseImage" placeholder="https://...">
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="courseFeatured">
                                     <label class="form-check-label" for="courseFeatured">
@@ -170,10 +175,32 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">📊 Featured Order</label>
                                 <input type="number" class="form-control" id="featuredOrder" value="0" min="0">
                                 <small class="text-muted">Lower number = appears first</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">🌐 Global Order</label>
+                                <input type="number" class="form-control" id="globalOrder" value="0" min="0" onchange="updateOrderInfo()">
+                                <small class="text-muted">Order in main courses page</small>
+                                <div id="globalOrderInfo" class="mt-1"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">📋 Category Order</label>
+                                <input type="number" class="form-control" id="categoryOrder" value="0" min="0" onchange="updateOrderInfo()">
+                                <small class="text-muted">Order within category</small>
+                                <div id="categoryOrderInfo" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-secondary mt-4" onclick="autoFillOrders()">
+                                    🔄 Auto-fill Orders
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info mt-2" onclick="showOrderSummary()">
+                                    📈 View Orders
+                                </button>
                             </div>
                         </div>
                         <div class="mb-3">
