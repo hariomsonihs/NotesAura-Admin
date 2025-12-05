@@ -18,29 +18,60 @@ function loadCategories() {
         .get()
         .then(querySnapshot => {
             categories = [];
-            const tbody = document.getElementById('categoriesTableBody');
-            tbody.innerHTML = '';
+            const grid = document.getElementById('categoriesGrid');
+            grid.innerHTML = '';
+
+            if (querySnapshot.empty) {
+                grid.innerHTML = `
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <h5>No Categories Yet</h5>
+                            <p>Start by adding your first e-book category</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
 
             querySnapshot.forEach(doc => {
                 const category = { id: doc.id, ...doc.data() };
                 categories.push(category);
                 
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${category.order || 0}</td>
-                    <td>${category.name}</td>
-                    <td>${category.description || ''}</td>
-                    <td>${category.imageUrl ? '<i class="fas fa-image text-success"></i>' : '<i class="fas fa-image text-muted"></i>'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editCategory('${doc.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${doc.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
+                const categoryCard = document.createElement('div');
+                categoryCard.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
+                categoryCard.innerHTML = `
+                    <div class="card category-card h-100">
+                        <div class="category-header">
+                            <h5 class="category-title">${category.name}</h5>
+                            ${category.description ? `<p class="category-description">${category.description}</p>` : ''}
+                        </div>
+                        <div class="category-body">
+                            <div class="category-stats">
+                                <span class="order-badge">Order: ${category.order || 0}</span>
+                                <div class="image-status">
+                                    ${category.imageUrl ? 
+                                        '<i class="fas fa-image text-success"></i> <span>Has Image</span>' : 
+                                        '<i class="fas fa-image text-muted"></i> <span>No Image</span>'
+                                    }
+                                </div>
+                            </div>
+                            <div class="category-actions">
+                                <button class="btn btn-action btn-edit" onclick="editCategory('${doc.id}')" title="Edit Category">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
+                                <button class="btn btn-action btn-delete" onclick="deleteCategory('${doc.id}')" title="Delete Category">
+                                    <i class="fas fa-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 `;
+                grid.appendChild(categoryCard);
             });
+
+            // Initialize search functionality
+            initializeCategorySearch();
         })
         .catch(error => {
             console.error('Error loading categories:', error);
@@ -120,3 +151,23 @@ function resetForm() {
 }
 
 document.getElementById('categoryModal').addEventListener('hidden.bs.modal', resetForm);
+
+// Search functionality for categories
+function initializeCategorySearch() {
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const categoryCards = document.querySelectorAll('.category-card');
+        
+        categoryCards.forEach(card => {
+            const categoryName = card.querySelector('.category-title').textContent.toLowerCase();
+            const categoryDescription = card.querySelector('.category-description')?.textContent.toLowerCase() || '';
+            
+            if (categoryName.includes(searchTerm) || categoryDescription.includes(searchTerm)) {
+                card.closest('.col-12').style.display = 'block';
+            } else {
+                card.closest('.col-12').style.display = 'none';
+            }
+        });
+    });
+}

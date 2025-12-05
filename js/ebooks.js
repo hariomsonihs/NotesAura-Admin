@@ -24,12 +24,13 @@ async function sendNotification(title, message, type, targetId, imageUrl) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
-    loadEbooks();
+    loadCategories().then(() => {
+        loadEbooks();
+    });
 });
 
 function loadCategories() {
-    db.collection('ebook_categories')
+    return db.collection('ebook_categories')
         .orderBy('order', 'asc')
         .get()
         .then(querySnapshot => {
@@ -66,11 +67,17 @@ function loadSubcategories() {
             const select = document.getElementById('subcategorySelect');
             select.innerHTML = '<option value="">Select Subcategory</option>';
 
+            // Sort subcategories by order within the category
+            const subcategoriesArray = [];
             querySnapshot.forEach(doc => {
-                const subcategory = { id: doc.id, ...doc.data() };
-                
+                subcategoriesArray.push({ id: doc.id, ...doc.data() });
+            });
+            
+            subcategoriesArray.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            subcategoriesArray.forEach(subcategory => {
                 const option = document.createElement('option');
-                option.value = doc.id;
+                option.value = subcategory.id;
                 option.textContent = subcategory.name;
                 select.appendChild(option);
             });
@@ -84,53 +91,103 @@ function loadEbooks() {
     Promise.all([
         db.collection('ebook_categories').get(),
         db.collection('ebook_subcategories').get(),
-        db.collection('ebooks').orderBy('order', 'asc').get()
+        db.collection('ebooks').get()
     ]).then(([categoriesSnapshot, subcategoriesSnapshot, ebooksSnapshot]) => {
         // Build lookup maps
         const categoryMap = {};
         const subcategoryMap = {};
+        const subcategoryToCategoryMap = {};
         
         categoriesSnapshot.forEach(doc => {
             categoryMap[doc.id] = doc.data().name;
         });
         
         subcategoriesSnapshot.forEach(doc => {
-            subcategoryMap[doc.id] = doc.data().name;
+            const subcategoryData = doc.data();
+            subcategoryMap[doc.id] = subcategoryData.name;
+            subcategoryToCategoryMap[doc.id] = subcategoryData.categoryId;
         });
 
         ebooks = [];
-        const tbody = document.getElementById('ebooksTableBody');
-        tbody.innerHTML = '';
+        const grid = document.getElementById('subcategoriesGrid');
+        grid.innerHTML = '';
 
+        // Group ebooks by subcategory and sort within each subcategory
+        const ebooksBySubcategory = {};
         ebooksSnapshot.forEach(doc => {
             const ebook = { id: doc.id, ...doc.data() };
             ebooks.push(ebook);
             
-            const subcategory = subcategoriesSnapshot.docs.find(s => s.id === ebook.subcategoryId);
-            const categoryId = subcategory ? subcategory.data().categoryId : '';
-            const categoryName = categoryMap[categoryId] || 'Unknown';
-            const subcategoryName = subcategoryMap[ebook.subcategoryId] || 'Unknown';
-            
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${ebook.order || 0}</td>
-                <td>${categoryName}</td>
-                <td>${subcategoryName}</td>
-                <td>${ebook.title}</td>
-                <td>${ebook.author}</td>
-                <td>
-                    ${ebook.pdfUrl ? '<a href="' + ebook.pdfUrl + '" target="_blank" class="btn btn-sm btn-outline-success"><i class="fas fa-external-link-alt"></i></a>' : 'No URL'}
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editEbook('${doc.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteEbook('${doc.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
+            if (!ebooksBySubcategory[ebook.subcategoryId]) {
+                ebooksBySubcategory[ebook.subcategoryId] = [];
+            }
+            ebooksBySubcategory[ebook.subcategoryId].push(ebook);
         });
+
+        // Sort ebooks within each subcategory by order
+        Object.keys(ebooksBySubcategory).forEach(subcategoryId => {
+            ebooksBySubcategory[subcategoryId].sort((a, b) => (a.order || 0) - (b.order || 0));
+        });
+
+        // Display subcategories with their ebooks
+        Object.keys(subcategoryMap).forEach(subcategoryId => {
+            const subcategoryEbooks = ebooksBySubcategory[subcategoryId] || [];
+            const categoryId = subcategoryToCategoryMap[subcategoryId];
+            const categoryName = categoryMap[categoryId] || 'Unknown';
+            const subcategoryName = subcategoryMap[subcategoryId] || 'Unknown';
+            const collapseId = `collapse-${subcategoryId}`;
+            
+            const subcategoryCard = document.createElement('div');
+            subcategoryCard.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
+            subcategoryCard.innerHTML = `
+                <div class="card subcategory-card h-100">
+                    <div class="subcategory-header" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                        <div class="category-breadcrumb">
+                            <i class="fas fa-folder"></i> ${categoryName}
+                        </div>
+                        <h5 class="mb-1">${subcategoryName}</h5>
+                        <small class="opacity-75">${subcategoryEbooks.length} ebooks</small>
+                    </div>
+                    <div class="collapse show" id="${collapseId}">
+                        <div class="card-body">
+                            ${subcategoryEbooks.length === 0 ? 
+                                '<p class="text-muted text-center py-3"><i class="fas fa-book-open"></i><br>No ebooks yet</p>' :
+                                subcategoryEbooks.map(ebook => `
+                                    <div class="ebook-item">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="badge badge-order me-2">${ebook.order || 0}</span>
+                                                    <h6 class="ebook-title mb-0">${ebook.title}</h6>
+                                                </div>
+                                                <p class="ebook-author mb-2">by ${ebook.author}</p>
+                                                ${ebook.description ? `<p class="text-muted small mb-2">${ebook.description}</p>` : ''}
+                                                <div class="d-flex align-items-center gap-2">
+                                                    ${ebook.pdfUrl ? `<a href="${ebook.pdfUrl}" target="_blank" class="pdf-link"><i class="fas fa-external-link-alt me-1"></i>View PDF</a>` : '<span class="text-muted">No PDF</span>'}
+                                                    ${ebook.imageUrl ? '<i class="fas fa-image text-success" title="Has Cover"></i>' : '<i class="fas fa-image text-muted" title="No Cover"></i>'}
+                                                </div>
+                                            </div>
+                                            <div class="btn-group-vertical ms-2">
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editEbook('${ebook.id}')" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteEbook('${ebook.id}')" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(subcategoryCard);
+        });
+
+        // Initialize search functionality
+        initializeEbookSearch();
     }).catch(error => {
         console.error('Error loading ebooks:', error);
         alert('Error loading ebooks');
@@ -240,3 +297,44 @@ function resetForm() {
 }
 
 document.getElementById('ebookModal').addEventListener('hidden.bs.modal', resetForm);
+
+// Search functionality for ebooks
+function initializeEbookSearch() {
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const subcategoryCards = document.querySelectorAll('.subcategory-card');
+        
+        subcategoryCards.forEach(card => {
+            const categoryName = card.querySelector('.category-breadcrumb').textContent.toLowerCase();
+            const subcategoryName = card.querySelector('.subcategory-header h5').textContent.toLowerCase();
+            const ebookItems = card.querySelectorAll('.ebook-item');
+            let hasVisibleEbooks = false;
+            
+            ebookItems.forEach(item => {
+                const title = item.querySelector('.ebook-title').textContent.toLowerCase();
+                const author = item.querySelector('.ebook-author').textContent.toLowerCase();
+                const description = item.querySelector('.text-muted')?.textContent.toLowerCase() || '';
+                
+                if (title.includes(searchTerm) || author.includes(searchTerm) || description.includes(searchTerm) || 
+                    categoryName.includes(searchTerm) || subcategoryName.includes(searchTerm)) {
+                    item.style.display = 'block';
+                    hasVisibleEbooks = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Show/hide entire subcategory card based on search results
+            if (hasVisibleEbooks || categoryName.includes(searchTerm) || subcategoryName.includes(searchTerm)) {
+                card.closest('.col-12').style.display = 'block';
+                // Expand collapsed subcategories when searching
+                if (searchTerm && !card.querySelector('.collapse').classList.contains('show')) {
+                    card.querySelector('[data-bs-toggle="collapse"]').click();
+                }
+            } else {
+                card.closest('.col-12').style.display = 'none';
+            }
+        });
+    });
+}

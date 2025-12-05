@@ -7,6 +7,145 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <style>
+        /* Mobile-first responsive design */
+        .main-content {
+            padding: 0;
+            margin-left: 0;
+        }
+        .content-area {
+            padding: 15px;
+        }
+        .topbar {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 0;
+        }
+        
+        /* Header responsive */
+        .header-controls {
+            flex-direction: column;
+            gap: 15px;
+        }
+        .search-container {
+            width: 100% !important;
+        }
+        .search-container .input-group {
+            width: 100% !important;
+        }
+        
+        /* Cards responsive */
+        .category-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        .category-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            padding: 15px;
+            cursor: pointer;
+        }
+        .subcategory-item {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            padding: 12px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .subcategory-item:hover {
+            background: #e9ecef;
+        }
+        .badge-order {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            font-weight: bold;
+            font-size: 0.75em;
+        }
+        .collapse-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.1em;
+            transition: transform 0.3s ease;
+        }
+        .collapse-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        /* Button responsive */
+        .btn-group-vertical .btn {
+            padding: 6px 8px;
+            font-size: 0.8em;
+        }
+        
+        /* Grid responsive */
+        @media (max-width: 576px) {
+            .col-12, .col-md-6, .col-lg-4, .col-xl-3 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+            .category-header {
+                padding: 12px;
+            }
+            .category-header h5 {
+                font-size: 1.1em;
+            }
+            .subcategory-item {
+                padding: 10px;
+            }
+            .btn-group-vertical {
+                flex-direction: row;
+                gap: 5px;
+            }
+            .btn-group-vertical .btn {
+                padding: 4px 6px;
+                font-size: 0.7em;
+            }
+        }
+        
+        @media (min-width: 577px) and (max-width: 768px) {
+            .col-md-6 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+            .header-controls {
+                flex-direction: row;
+                align-items: center;
+            }
+            .search-container {
+                width: 60% !important;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .header-controls {
+                flex-direction: row;
+                align-items: center;
+            }
+            .search-container {
+                width: 300px !important;
+            }
+            .main-content {
+                margin-left: 250px;
+            }
+        }
+        
+        /* Focus states */
+        .search-container .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+    </style>
 </head>
 <body>
     <div class="d-flex">
@@ -16,11 +155,14 @@
                 <p class="text-muted">Admin Panel</p>
             </div>
             <ul class="nav flex-column">
+                <!-- Dashboard -->
                 <li class="nav-item">
                     <a class="nav-link" href="dashboard.html">
                         <i class="fas fa-home"></i> Dashboard
                     </a>
                 </li>
+                
+                <!-- Course Management -->
                 <li class="nav-item">
                     <a class="nav-link" href="courses.html">
                         <i class="fas fa-book"></i> Courses
@@ -31,6 +173,8 @@
                         <i class="fas fa-folder"></i> Course Categories
                     </a>
                 </li>
+                
+                <!-- E-book Management -->
                 <li class="nav-item">
                     <a class="nav-link" href="ebook-categories.html">
                         <i class="fas fa-book-open"></i> E-book Categories
@@ -46,8 +190,70 @@
                         <i class="fas fa-file-pdf"></i> E-books
                     </a>
                 </li>
+                
+                <!-- Quiz & Practice -->
                 <li class="nav-item">
-                    <a class="nav-link" href="#" id="logoutBtn">
+                    <a class="nav-link" href="quiz.html">
+                        <i class="fas fa-question-circle"></i> Quiz Management
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="practice.html">
+                        <i class="fas fa-code"></i> Practice Exercises
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="interview.html">
+                        <i class="fas fa-user-tie"></i> Interview Questions
+                    </a>
+                </li>
+                
+                <!-- User Management -->
+                <li class="nav-item">
+                    <a class="nav-link" href="users.html">
+                        <i class="fas fa-users"></i> Users
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="payment-tracking.html">
+                        <i class="fas fa-credit-card"></i> Payments
+                    </a>
+                </li>
+                
+                <!-- Communication -->
+                <li class="nav-item">
+                    <a class="nav-link" href="notifications.html">
+                        <i class="fas fa-bell"></i> Notifications
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="bulk-notifications.html">
+                        <i class="fas fa-bullhorn"></i> Bulk Notifications
+                    </a>
+                </li>
+                
+                <!-- Analytics & Reports -->
+                <li class="nav-item">
+                    <a class="nav-link" href="analytics.html">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="ratings.html">
+                        <i class="fas fa-star"></i> Ratings & Reviews
+                    </a>
+                </li>
+                
+                <!-- App Controls -->
+                <li class="nav-item">
+                    <a class="nav-link" href="app-controls.html">
+                        <i class="fas fa-cogs"></i> App Controls
+                    </a>
+                </li>
+                
+                <!-- Logout -->
+                <li class="nav-item mt-3">
+                    <a class="nav-link text-danger" href="#" id="logoutBtn">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </li>
@@ -63,28 +269,24 @@
             </div>
 
             <div class="content-area">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <!-- Header with Search and Add Button -->
+                <div class="d-flex header-controls mb-4">
+                    <div class="search-container">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Search categories...">
+                        </div>
+                    </div>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#subcategoryModal">
-                        <i class="fas fa-plus me-2"></i>Add Subcategory
+                        <i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">Add </span>Subcategory
                     </button>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Order</th>
-                                <th>Category</th>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Image</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="subcategoriesTableBody">
-                            <!-- Subcategories will be loaded here -->
-                        </tbody>
-                    </table>
+                <!-- Categories Grid -->
+                <div id="categoriesGrid" class="row g-3">
+                    <!-- Categories will be loaded here -->
                 </div>
             </div>
         </div>
