@@ -119,7 +119,11 @@ window.addExerciseField = function() {
         <input type="text" class="form-control form-control-sm mb-2" placeholder="Exercise ID (e.g., e1)" data-field="id">
         <input type="text" class="form-control form-control-sm mb-2" placeholder="Title" data-field="title">
         <input type="text" class="form-control form-control-sm mb-2" placeholder="Description" data-field="description">
-        <input type="url" class="form-control form-control-sm mb-2" placeholder="Content URL" data-field="contentPath">
+        <div class="mb-2">
+            <input type="url" class="form-control form-control-sm" placeholder="Content URL (Web page or PDF link)" data-field="contentPath" onchange="detectContentType(this)">
+            <small class="text-muted">💡 Supports: Web pages, Google Drive PDFs, Direct PDF links</small>
+            <div class="content-type-indicator mt-1"></div>
+        </div>
         <input type="text" class="form-control form-control-sm" placeholder="Course ID" data-field="courseId">
     `;
     container.appendChild(div);
@@ -211,7 +215,11 @@ window.editCourse = function(courseId) {
                 <input type="text" class="form-control form-control-sm mb-2" placeholder="Exercise ID" data-field="id" value="${ex.id || ''}">
                 <input type="text" class="form-control form-control-sm mb-2" placeholder="Title" data-field="title" value="${ex.title || ''}">
                 <input type="text" class="form-control form-control-sm mb-2" placeholder="Description" data-field="description" value="${ex.description || ''}">
-                <input type="url" class="form-control form-control-sm mb-2" placeholder="Content URL" data-field="contentPath" value="${ex.contentPath || ''}">
+                <div class="mb-2">
+                    <input type="url" class="form-control form-control-sm" placeholder="Content URL (Web page or PDF link)" data-field="contentPath" value="${ex.contentPath || ''}" onchange="detectContentType(this)">
+                    <small class="text-muted">💡 Supports: Web pages, Google Drive PDFs, Direct PDF links</small>
+                    <div class="content-type-indicator mt-1">${getContentTypeIndicator(ex.contentPath || '')}</div>
+                </div>
                 <input type="text" class="form-control form-control-sm" placeholder="Course ID" data-field="courseId" value="${ex.courseId || ''}">
             `;
             container.appendChild(div);
@@ -616,6 +624,37 @@ window.viewCourseRatings = async function(courseId) {
         console.error('Error loading ratings:', error);
         alert('Error loading ratings');
     }
+}
+
+// Content Type Detection
+window.detectContentType = function(input) {
+    const url = input.value.trim();
+    const indicator = input.parentElement.querySelector('.content-type-indicator');
+    indicator.innerHTML = getContentTypeIndicator(url);
+}
+
+function getContentTypeIndicator(url) {
+    if (!url) return '';
+    
+    // Check for PDF URLs
+    if (url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('view'))) {
+        return '<span class="badge bg-danger"><i class="fas fa-file-pdf"></i> Google Drive PDF</span>';
+    }
+    
+    if (url.toLowerCase().endsWith('.pdf')) {
+        return '<span class="badge bg-danger"><i class="fas fa-file-pdf"></i> Direct PDF</span>';
+    }
+    
+    if (url.includes('dropbox.com') && url.includes('.pdf')) {
+        return '<span class="badge bg-danger"><i class="fas fa-file-pdf"></i> Dropbox PDF</span>';
+    }
+    
+    // Web page
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return '<span class="badge bg-primary"><i class="fas fa-globe"></i> Web Page</span>';
+    }
+    
+    return '<span class="badge bg-secondary"><i class="fas fa-file"></i> Local File</span>';
 }
 
 // Initialize
