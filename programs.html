@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programs Management - NotesAura Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .ql-toolbar .ql-undo:after { content: "↶"; font-size: 18px; }
+        .ql-toolbar .ql-redo:after { content: "↷"; font-size: 18px; }
+        .category-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .category-color-box {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 15px;
+        }
+        .program-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .code-preview {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="d-flex">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>🎓 NotesAura</h3>
+                <p class="text-muted">Admin Panel</p>
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.html">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="courses.html">
+                        <i class="fas fa-book"></i> Courses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="practice.html">
+                        <i class="fas fa-code"></i> Practice
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="programs.html">
+                        <i class="fas fa-laptop-code"></i> Programs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="quiz.html">
+                        <i class="fas fa-question-circle"></i> Quiz
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="interview.html">
+                        <i class="fas fa-briefcase"></i> Interview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="users.html">
+                        <i class="fas fa-users"></i> Users
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <div class="topbar">
+                <h4>Programs Management</h4>
+                <div class="user-info">
+                    <span id="userEmail"></span>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5>Program Categories</h5>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                        <i class="fas fa-plus"></i> Add Category
+                    </button>
+                </div>
+
+                <div id="categoriesContainer" class="row"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Program Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" placeholder="e.g., Java Programs">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="categoryDesc" rows="2" placeholder="Brief description"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <select class="form-select" id="categoryColor">
+                            <option value="#FF6B8E">Pink</option>
+                            <option value="#7B68EE">Purple</option>
+                            <option value="#4ECDC4">Teal</option>
+                            <option value="#FFE66D">Yellow</option>
+                            <option value="#1DD1A1">Green</option>
+                            <option value="#FF6B9D">Rose</option>
+                            <option value="#3498DB">Blue</option>
+                            <option value="#FFA586">Orange</option>
+                            <option value="#E74C3C">Red</option>
+                            <option value="#9B59B6">Violet</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addCategory()">Add Category</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Programs List Modal -->
+    <div class="modal fade" id="programsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="programsModalTitle">Programs</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-success mb-3" onclick="showAddProgramModal()">
+                        <i class="fas fa-plus"></i> Add Program
+                    </button>
+                    <button class="btn btn-info mb-3 ms-2" onclick="showBulkImportModal()">
+                        <i class="fas fa-file-import"></i> Bulk Import
+                    </button>
+                    <button class="btn btn-danger mb-3 ms-2" id="deleteSelectedBtn" onclick="deleteSelected()" style="display: none;">
+                        <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="selectAllPrograms" onchange="toggleSelectAll()">
+                        <label class="form-check-label" for="selectAllPrograms">
+                            Select All
+                        </label>
+                    </div>
+                    <div id="programsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Program Modal -->
+    <div class="modal fade" id="addProgramModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="programModalTitle">Add Program</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Program Title</label>
+                        <input type="text" class="form-control" id="programTitle" placeholder="e.g., Hello World Program">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="programDesc" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Language</label>
+                        <select class="form-select" id="programLanguage">
+                            <option value="java">Java</option>
+                            <option value="python">Python</option>
+                            <option value="c">C</option>
+                            <option value="cpp">C++</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="html">HTML</option>
+                            <option value="css">CSS</option>
+                            <option value="kotlin">Kotlin</option>
+                            <option value="swift">Swift</option>
+                            <option value="dart">Dart</option>
+                            <option value="go">Go</option>
+                            <option value="ruby">Ruby</option>
+                            <option value="php">PHP</option>
+                            <option value="sql">SQL</option>
+                            <option value="typescript">TypeScript</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Code Files</label>
+                        <div id="codeFilesContainer"></div>
+                        <button type="button" class="btn btn-sm btn-success mt-2" onclick="addCodeFile()">
+                            <i class="fas fa-plus"></i> Add File
+                        </button>
+                        <input type="hidden" id="programCode">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Output</label>
+                        <textarea class="form-control" id="programOutput" rows="4" style="font-family: monospace;"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Download Link (Optional)</label>
+                        <input type="url" class="form-control" id="programDownloadLink" placeholder="https://github.com/user/repo or https://drive.google.com/...">
+                        <small class="text-muted">GitHub repo link or direct download link</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Details / Instructions (Optional)</label>
+                            <button type="button" class="btn btn-sm btn-info" onclick="autoFormatDetails()">
+                                <i class="fas fa-magic"></i> Auto Format
+                            </button>
+                        </div>
+                        <div id="detailsEditor" style="height: 200px; background: white;"></div>
+                        <input type="hidden" id="programDetails">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProgram()">Save Program</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div class="modal fade" id="bulkImportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bulk Import Programs</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">GitHub JSON URL</label>
+                        <input type="url" class="form-control" id="jsonUrl" placeholder="https://raw.githubusercontent.com/user/repo/main/programs.json">
+                        <small class="text-muted">Use raw.githubusercontent.com URL</small>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>JSON Format:</strong>
+                        <pre style="font-size: 11px; margin-top: 8px;">[
+  {
+    "program_name": "Hello World",
+    "description": "Basic program",
+    "instruction": "How to run...",
+    "code": "public class...",
+    "output": "Hello!"
+  }
+]</pre>
+                    </div>
+                    <div id="importProgress" class="mt-3" style="display: none;">
+                        <div class="progress">
+                            <div id="importProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <p id="importStatus" class="mt-2 text-center"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="importPrograms()">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/auth-guard.js"></script>
+    <script type="module" src="js/logout.js"></script>
+    <script type="module" src="js/programs.js"></script>
+</body>
+</html>

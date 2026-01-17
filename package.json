@@ -1,0 +1,23 @@
+{
+  "name": "notesaura-web-admin-panel",
+  "version": "1.0.0",
+  "description": "Complete web-based admin panel for NotesAura Programming Guide app with real-time Firebase sync",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "live-server",
+    "deploy": "firebase deploy"
+  },
+  "keywords": [
+    "admin-panel",
+    "firebase",
+    "javascript",
+    "web-app",
+    "notesaura"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
