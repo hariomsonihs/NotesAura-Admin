@@ -217,8 +217,36 @@
                                 <strong>💡 Content Types Supported:</strong><br>
                                 • <i class="fas fa-globe text-primary"></i> Web Pages: Regular HTTP/HTTPS URLs<br>
                                 • <i class="fas fa-file-pdf text-danger"></i> PDF Files: Google Drive, Dropbox, or direct PDF links<br>
-                                <small class="text-muted">PDF links will automatically open in the built-in PDF viewer with zoom, search, and save features.</small>
+                                • <i class="fas fa-file-alt text-success"></i> <strong>Text Files (.txt, .md):</strong> GitHub raw URLs or direct text file links<br>
+                                <small class="text-muted d-block mt-1">📝 Text files support: Headings (#, ##, ###), **Bold**, *Italic*, Bullet lists (-), Numbered lists (1.), Code blocks (```), Images (![alt](url)), Quotes (>), and more!</small>
+                                <small class="text-muted d-block">Example: https://raw.githubusercontent.com/username/repo/main/exercises/lesson1.txt</small>
+                                <small class="text-danger d-block mt-2"><strong>⚠️ Important:</strong> GitHub caches content for 5 minutes. To force refresh after editing, add version: <code>?v=1</code>, <code>?v=2</code>, etc.</small>
+                                <small class="text-muted d-block">Example: https://raw.githubusercontent.com/.../file.txt<strong>?v=1</strong></small>
                             </div>
+                            
+                            <!-- Text Formatter Tool -->
+                            <div class="card bg-light mb-3">
+                                <div class="card-header">
+                                    <strong>🎨 Text Formatter Tool</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-info float-end" onclick="toggleFormatter()">
+                                        <i class="fas fa-magic"></i> Show/Hide
+                                    </button>
+                                </div>
+                                <div class="card-body" id="formatterTool" style="display:none;">
+                                    <p class="small text-muted mb-2">Paste your plain text and click format to convert bullets and checkmarks to italic style:</p>
+                                    <textarea class="form-control mb-2" id="plainText" rows="8" placeholder="Paste your plain text here...\n\nExample:\n* Making mobile apps\n✅ Easy to learn"></textarea>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="formatText()">
+                                        <i class="fas fa-magic"></i> Format Text
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="copyFormatted()">
+                                        <i class="fas fa-copy"></i> Copy Result
+                                    </button>
+                                    <hr>
+                                    <label class="form-label small"><strong>Formatted Result:</strong></label>
+                                    <textarea class="form-control" id="formattedText" rows="8" readonly></textarea>
+                                </div>
+                            </div>
+                            
                             <div id="exercisesList"></div>
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="addExerciseField()">
                                 <i class="fas fa-plus"></i> Add Exercise
@@ -238,6 +266,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/mobile-menu.js"></script>
+    <script src="js/text-formatter.js"></script>
     <script type="module" src="js/firebase-config.js"></script>
     <script type="module" src="js/auth-guard.js"></script>
     <script type="module" src="js/logout.js"></script>
