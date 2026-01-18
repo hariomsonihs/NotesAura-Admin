@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview - NotesAura Admin</title>
+    <title>Interview Questions - NotesAura Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -32,8 +32,8 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="practice.html">
-                        <i class="fas fa-code"></i> Practice
+                    <a class="nav-link" href="programs.html">
+                        <i class="fas fa-code"></i> Programs
                     </a>
                 </li>
                 <li class="nav-item">
@@ -43,7 +43,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" href="interview.html">
-                        <i class="fas fa-briefcase"></i> Interview
+                        <i class="fas fa-briefcase"></i> Interview Questions
                     </a>
                 </li>
                 <li class="nav-item">
@@ -56,14 +56,19 @@
 
         <div class="main-content">
             <div class="topbar">
-                <h4>Interview Management</h4>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openAddCategory()">
-                    <i class="fas fa-plus me-2"></i>Add Category
-                </button>
+                <h4 id="pageTitle">Interview Questions Management</h4>
+                <div>
+                    <button class="btn btn-secondary me-2" id="backBtn" style="display:none;" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                    <button class="btn btn-primary" id="addBtn" onclick="openAddCategory()">
+                        <i class="fas fa-plus me-2"></i>Add Category
+                    </button>
+                </div>
             </div>
 
             <div class="content-area">
-                <div class="row" id="categoriesGrid"></div>
+                <div class="row" id="contentGrid"></div>
             </div>
         </div>
     </div>
@@ -80,7 +85,7 @@
                     <form id="categoryForm">
                         <input type="hidden" id="categoryId">
                         <div class="mb-3">
-                            <label class="form-label">Name</label>
+                            <label class="form-label">Name *</label>
                             <input type="text" class="form-control" id="categoryName" required>
                         </div>
                         <div class="mb-3">
@@ -88,12 +93,8 @@
                             <textarea class="form-control" id="categoryDescription" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Color</label>
-                            <input type="color" class="form-control" id="categoryColor" value="#2196F3" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Order</label>
-                            <input type="number" class="form-control" id="categoryOrder" value="0" required>
+                            <label class="form-label">Icon (Emoji)</label>
+                            <input type="text" class="form-control" id="categoryIcon" placeholder="💼" maxlength="2">
                         </div>
                     </form>
                 </div>
@@ -107,84 +108,43 @@
         </div>
     </div>
 
-    <!-- Question Modal -->
-    <div class="modal fade" id="questionModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="questionModalTitle">Add Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="questionForm">
-                        <input type="hidden" id="questionCategoryId">
-                        <input type="hidden" id="questionId">
-                        <div class="mb-3">
-                            <label class="form-label">Title</label>
-                            <input type="text" class="form-control" id="questionTitle" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" id="questionDescription" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Web Link</label>
-                            <input type="url" class="form-control" id="questionWebLink">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Order</label>
-                            <input type="number" class="form-control" id="questionOrder" value="0" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveQuestion()">
-                        <i class="fas fa-save me-2"></i>Save
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Interview Modal -->
-    <div class="modal fade" id="interviewModal" tabindex="-1">
+    <!-- Set Modal -->
+    <div class="modal fade" id="setModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Add Interview Category</h5>
+                    <h5 class="modal-title" id="setModalTitle">Add Interview Set</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="interviewForm">
-                        <input type="hidden" id="interviewId">
+                    <form id="setForm">
+                        <input type="hidden" id="setId">
+                        <input type="hidden" id="setCategoryId">
                         <div class="mb-3">
-                            <label class="form-label">Title</label>
-                            <input type="text" class="form-control" id="interviewTitle" required>
+                            <label class="form-label">Title *</label>
+                            <input type="text" class="form-control" id="setTitle" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Description</label>
-                            <textarea class="form-control" id="interviewDescription" rows="2" required></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Category</label>
-                                <input type="text" class="form-control" id="interviewCategory" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Emoji</label>
-                                <input type="text" class="form-control" id="interviewEmoji" placeholder="e.g., 💼" required>
-                            </div>
+                            <textarea class="form-control" id="setDescription" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Total Questions</label>
-                            <input type="number" class="form-control" id="interviewTotal" value="0" required>
+                            <label class="form-label">JSON URL *</label>
+                            <input type="url" class="form-control" id="setJsonUrl" required>
+                            <small class="text-muted">GitHub raw URL containing interview questions JSON</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Questions Count</label>
+                            <input type="number" class="form-control" id="setQuestionsCount" value="0">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveInterview()">
+                    <button type="button" class="btn btn-info me-auto" onclick="viewJSON()">
+                        <i class="fas fa-eye me-2"></i>View JSON Format
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveSet()">
                         <i class="fas fa-save me-2"></i>Save
                     </button>
                 </div>

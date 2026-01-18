@@ -161,6 +161,9 @@ window.viewSubcategories = async function(categoryId, categoryName) {
                     <p class="text-muted">Order: ${subcategory.order}</p>
                     ${subcategory.webUrl ? `<p class="text-muted small"><a href="${subcategory.webUrl}" target="_blank">View Quiz</a></p>` : ''}
                     <div class="course-actions">
+                        <button class="btn btn-sm btn-info" onclick="viewQuizSets('${subcategory.id}', '${subcategory.name}')">
+                            <i class="fas fa-list"></i> Quiz Sets
+                        </button>
                         <button class="btn btn-sm btn-warning" onclick="editSubcategory('${categoryId}', '${subcategory.id}')">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -248,6 +251,139 @@ window.deleteSubcategory = async function(categoryId, subcategoryId) {
     } catch (error) {
         console.error('Error deleting subcategory:', error);
         alert('Error deleting subcategory');
+    }
+}
+
+// View Quiz Sets
+window.viewQuizSets = async function(subcategoryId, subcategoryName) {
+    const grid = document.getElementById('categoriesGrid');
+    grid.innerHTML = `
+        <div class="col-12 mb-3">
+            <button class="btn btn-secondary" onclick="viewSubcategories('${currentCategoryId}', '')">
+                <i class="fas fa-arrow-left me-2"></i>Back to Subcategories
+            </button>
+            <button class="btn btn-primary ms-2" onclick="openAddQuizSet('${subcategoryId}')">
+                <i class="fas fa-plus me-2"></i>Add Quiz Set
+            </button>
+            <h5 class="mt-3">${subcategoryName} - Quiz Sets</h5>
+        </div>
+    `;
+    
+    try {
+        const q = query(collection(db, 'quiz_sets'), where('subcategoryId', '==', subcategoryId));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            grid.innerHTML += '<div class="col-12"><p class="text-muted">No quiz sets found</p></div>';
+            return;
+        }
+        
+        const quizSets = [];
+        snapshot.forEach(doc => {
+            quizSets.push({ id: doc.id, ...doc.data() });
+        });
+        
+        quizSets.sort((a, b) => a.order - b.order);
+        
+        quizSets.forEach(quizSet => {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4';
+            col.innerHTML = `
+                <div class="quiz-card">
+                    <h5>📝 ${quizSet.name}</h5>
+                    <p class="text-muted">Order: ${quizSet.order}</p>
+                    ${quizSet.jsonUrl ? `<p class="text-muted small"><a href="${quizSet.jsonUrl}" target="_blank">View JSON</a></p>` : ''}
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-warning" onclick="editQuizSet('${subcategoryId}', '${quizSet.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteQuizSet('${subcategoryId}', '${quizSet.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+    } catch (error) {
+        console.error('Error loading quiz sets:', error);
+        grid.innerHTML += `<div class="col-12"><p class="text-danger">Error: ${error.message}</p></div>`;
+    }
+}
+
+// Open Add Quiz Set
+window.openAddQuizSet = function(subcategoryId) {
+    editingId = null;
+    document.getElementById('quizSetModalTitle').textContent = 'Add Quiz Set';
+    document.getElementById('quizSetForm').reset();
+    document.getElementById('quizSetSubcategoryId').value = subcategoryId;
+    
+    new bootstrap.Modal(document.getElementById('quizSetModal')).show();
+}
+
+// Edit Quiz Set
+window.editQuizSet = async function(subcategoryId, quizSetId) {
+    editingId = quizSetId;
+    
+    const quizSetDoc = await getDocs(collection(db, 'quiz_sets'));
+    const quizSet = quizSetDoc.docs.find(d => d.id === quizSetId).data();
+    
+    document.getElementById('quizSetModalTitle').textContent = 'Edit Quiz Set';
+    document.getElementById('quizSetSubcategoryId').value = subcategoryId;
+    document.getElementById('quizSetId').value = quizSetId;
+    document.getElementById('quizSetName').value = quizSet.name;
+    document.getElementById('quizSetJsonUrl').value = quizSet.jsonUrl || '';
+    document.getElementById('quizSetOrder').value = quizSet.order;
+    
+    new bootstrap.Modal(document.getElementById('quizSetModal')).show();
+}
+
+// Save Quiz Set
+window.saveQuizSet = async function() {
+    const subcategoryId = document.getElementById('quizSetSubcategoryId').value;
+    const name = document.getElementById('quizSetName').value;
+    let jsonUrl = document.getElementById('quizSetJsonUrl').value;
+    const order = parseInt(document.getElementById('quizSetOrder').value);
+    
+    // Auto-convert GitHub URL to raw URL
+    if (jsonUrl.includes('github.com') && jsonUrl.includes('/blob/')) {
+        jsonUrl = jsonUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+    }
+    
+    const quizSetData = {
+        name: name,
+        jsonUrl: jsonUrl,
+        order: order,
+        subcategoryId: subcategoryId
+    };
+    
+    try {
+        if (editingId) {
+            await updateDoc(doc(db, 'quiz_sets', editingId), quizSetData);
+        } else {
+            const id = name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+            quizSetData.id = id;
+            await setDoc(doc(db, 'quiz_sets', id), quizSetData);
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('quizSetModal')).hide();
+        viewQuizSets(subcategoryId, '');
+    } catch (error) {
+        console.error('Error saving quiz set:', error);
+        alert('Error saving quiz set');
+    }
+}
+
+// Delete Quiz Set
+window.deleteQuizSet = async function(subcategoryId, quizSetId) {
+    if (!confirm('Delete this quiz set?')) return;
+    
+    try {
+        await deleteDoc(doc(db, 'quiz_sets', quizSetId));
+        viewQuizSets(subcategoryId, '');
+    } catch (error) {
+        console.error('Error deleting quiz set:', error);
+        alert('Error deleting quiz set');
     }
 }
 

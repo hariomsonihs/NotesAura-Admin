@@ -61,6 +61,9 @@ async function loadCategories() {
                             <button class="btn btn-sm btn-secondary" onclick="moveCategory('${categoryId}', 'down')" title="Move Down">
                                 <i class="fas fa-arrow-down"></i>
                             </button>
+                            <button class="btn btn-sm btn-info" onclick="viewCategoryJSON('${categoryId}', '${category.name}')" title="View JSON">
+                                <i class="fas fa-file-code"></i>
+                            </button>
                             <button class="btn btn-sm btn-primary flex-grow-1" onclick="viewPrograms('${categoryId}', '${category.name}')">
                                 <i class="fas fa-eye"></i> View Programs
                             </button>
@@ -306,6 +309,62 @@ window.viewPrograms = async function(categoryId, categoryName) {
     loadPrograms(categoryId);
 };
 
+// View Category JSON
+window.viewCategoryJSON = async function(categoryId, categoryName) {
+    try {
+        const q = query(collection(db, 'programs'), where('categoryId', '==', categoryId));
+        const snapshot = await getDocs(q);
+        
+        const programs = [];
+        for (const docSnap of snapshot.docs) {
+            const program = docSnap.data();
+            
+            // Parse code files
+            let codeData = '';
+            try {
+                const codeFiles = JSON.parse(program.code);
+                if (codeFiles.length === 1) {
+                    codeData = codeFiles[0].code;
+                } else {
+                    codeData = program.code;
+                }
+            } catch (e) {
+                codeData = program.code || '';
+            }
+            
+            programs.push({
+                program_name: program.title,
+                description: program.description || '',
+                instruction: program.details ? program.details.replace(/<[^>]*>/g, '').replace(/\n+/g, '\n') : '',
+                code: codeData,
+                output: program.output || '',
+                language: program.language,
+                downloadLink: program.downloadLink || ''
+            });
+        }
+        
+        // Sort by orderIndex
+        programs.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+        
+        // Create JSON blob and open in new tab
+        const jsonString = JSON.stringify(programs, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const newWindow = window.open(url, '_blank');
+        if (!newWindow) {
+            alert('Please allow popups to view JSON');
+        }
+        
+        // Clean up URL after a delay
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        
+    } catch (error) {
+        console.error('Error generating JSON:', error);
+        alert('Error generating JSON: ' + error.message);
+    }
+};
+
 function detectLanguageFromCategory(categoryName) {
     const lowerName = categoryName.toLowerCase();
     if (lowerName.includes('java') && !lowerName.includes('javascript')) return 'java';
@@ -331,6 +390,8 @@ function detectLanguageFromCategory(categoryName) {
 }
 
 // Load Programs
+let allProgramsCache = [];
+
 async function loadPrograms(categoryId) {
     const container = document.getElementById('programsList');
     container.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
@@ -341,61 +402,67 @@ async function loadPrograms(categoryId) {
         const snapshot = await getDocs(q);
         
         // Sort manually
-        const programsArray = [];
+        allProgramsCache = [];
         snapshot.forEach((docSnap) => {
             const program = docSnap.data();
             program.id = docSnap.id;
-            programsArray.push(program);
+            allProgramsCache.push(program);
         });
-        programsArray.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+        allProgramsCache.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
         
-        container.innerHTML = '';
-        
-        if (snapshot.empty) {
-            container.innerHTML = '<div class="text-center text-muted">No programs yet. Add your first program!</div>';
-            return;
-        }
-
-        programsArray.forEach((program, index) => {
-            const programId = program.id;
-            
-            const item = `
-                <div class="program-item">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="d-flex align-items-start">
-                            <input class="form-check-input me-2 program-checkbox" type="checkbox" value="${programId}" onchange="updateDeleteButton()">
-                            <div>
-                                <h6 class="mb-1">${index + 1}. ${program.title}</h6>
-                                <small class="text-muted">${program.description || 'No description'}</small>
-                                <br><span class="badge bg-info mt-1">${program.language.toUpperCase()}</span>
-                            </div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-secondary" onclick="moveProgram('${programId}', 'up')" title="Move Up">
-                                <i class="fas fa-arrow-up"></i>
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="moveProgram('${programId}', 'down')" title="Move Down">
-                                <i class="fas fa-arrow-down"></i>
-                            </button>
-                            <button class="btn btn-sm btn-primary" onclick="viewProgramDetails('${programId}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-warning" onclick="editProgram('${programId}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteProgram('${programId}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.innerHTML += item;
-        });
+        displayPrograms(allProgramsCache);
     } catch (error) {
         console.error('Error loading programs:', error);
         container.innerHTML = '<div class="text-center text-danger">Error loading programs</div>';
     }
+}
+
+function displayPrograms(programsArray) {
+    const container = document.getElementById('programsList');
+    container.innerHTML = '';
+    
+    if (programsArray.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">No programs found</div>';
+        return;
+    }
+
+    programsArray.forEach((program, index) => {
+        const programId = program.id;
+        
+        const item = `
+            <div class="program-item">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-start">
+                        <input class="form-check-input me-2 program-checkbox" type="checkbox" value="${programId}" onchange="updateDeleteButton()">
+                        <div>
+                            <h6 class="mb-1">${index + 1}. ${program.title}</h6>
+                            <small class="text-muted">${program.description || 'No description'}</small>
+                            <br><span class="badge bg-info mt-1">${program.language.toUpperCase()}</span>
+                            ${program.jsonUrl ? '<span class="badge bg-success mt-1 ms-1">JSON</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-secondary" onclick="moveProgram('${programId}', 'up')" title="Move Up">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="moveProgram('${programId}', 'down')" title="Move Down">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="viewProgramDetails('${programId}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="editProgram('${programId}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProgram('${programId}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML += item;
+    });
 }
 
 // Show Bulk Import Modal
@@ -522,17 +589,20 @@ window.deleteSelected = async function() {
     if (!confirm(`Delete ${checkboxes.length} selected programs?`)) return;
     
     try {
-        for (const checkbox of checkboxes) {
-            await deleteDoc(doc(db, 'programs', checkbox.value));
-        }
+        const deletePromises = [];
+        checkboxes.forEach(checkbox => {
+            deletePromises.push(deleteDoc(doc(db, 'programs', checkbox.value)));
+        });
+        
+        await Promise.all(deletePromises);
         
         document.getElementById('selectAllPrograms').checked = false;
-        loadPrograms(currentCategoryId);
-        loadCategories();
+        await loadPrograms(currentCategoryId);
+        await loadCategories();
         alert(`${checkboxes.length} programs deleted successfully!`);
     } catch (error) {
         console.error('Error deleting programs:', error);
-        alert('Error deleting programs');
+        alert('Error deleting programs: ' + error.message);
     }
 };
 
@@ -622,14 +692,21 @@ window.removeCodeFile = function(index) {
 window.saveProgram = async function() {
     const title = document.getElementById('programTitle').value.trim();
     const description = document.getElementById('programDesc').value.trim();
+    const jsonUrl = document.getElementById('programJsonUrl').value.trim();
     const language = document.getElementById('programLanguage').value;
     const code = JSON.stringify(codeFiles);
     const output = document.getElementById('programOutput').value.trim();
     const downloadLink = document.getElementById('programDownloadLink').value.trim();
     const details = detailsQuill.root.innerHTML;
 
-    if (!title || codeFiles.length === 0 || !codeFiles[0].code) {
-        alert('Please enter title and at least one code file');
+    if (!title) {
+        alert('Please enter title');
+        return;
+    }
+    
+    // If jsonUrl is provided, code is optional
+    if (!jsonUrl && (codeFiles.length === 0 || !codeFiles[0].code)) {
+        alert('Please enter JSON URL or at least one code file');
         return;
     }
     
@@ -651,12 +728,23 @@ window.saveProgram = async function() {
             title,
             description,
             language,
-            code,
-            output,
-            downloadLink,
-            details,
             timestamp: Date.now()
         };
+        
+        // If jsonUrl is provided, only save jsonUrl and basic info
+        if (jsonUrl) {
+            programData.jsonUrl = jsonUrl;
+            programData.code = '';
+            programData.output = '';
+            programData.downloadLink = '';
+            programData.details = '';
+        } else {
+            // Save full program data
+            programData.code = code;
+            programData.output = output;
+            programData.downloadLink = downloadLink;
+            programData.details = details;
+        }
 
         if (currentProgramId) {
             await updateDoc(doc(db, 'programs', currentProgramId), programData);
@@ -690,6 +778,7 @@ window.editProgram = async function(programId) {
             document.getElementById('programModalTitle').textContent = 'Edit Program';
             document.getElementById('programTitle').value = program.title;
             document.getElementById('programDesc').value = program.description || '';
+            document.getElementById('programJsonUrl').value = program.jsonUrl || '';
             document.getElementById('programLanguage').value = program.language;
             
             try {
@@ -870,4 +959,18 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" class="btn btn-primary" onclick="addCategory()">Add Category</button>
         `;
     });
+    
+    // Program search functionality
+    const programSearchInput = document.getElementById('programSearchInput');
+    if (programSearchInput) {
+        programSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allProgramsCache.filter(program => 
+                program.title.toLowerCase().includes(searchTerm) ||
+                (program.description && program.description.toLowerCase().includes(searchTerm)) ||
+                program.language.toLowerCase().includes(searchTerm)
+            );
+            displayPrograms(filtered);
+        });
+    }
 });

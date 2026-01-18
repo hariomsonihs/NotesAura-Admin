@@ -181,15 +181,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-success mb-3" onclick="showAddProgramModal()">
-                        <i class="fas fa-plus"></i> Add Program
-                    </button>
-                    <button class="btn btn-info mb-3 ms-2" onclick="showBulkImportModal()">
-                        <i class="fas fa-file-import"></i> Bulk Import
-                    </button>
-                    <button class="btn btn-danger mb-3 ms-2" id="deleteSelectedBtn" onclick="deleteSelected()" style="display: none;">
-                        <i class="fas fa-trash"></i> Delete Selected
-                    </button>
+                    <div class="d-flex gap-2 mb-3">
+                        <button class="btn btn-success" onclick="showAddProgramModal()">
+                            <i class="fas fa-plus"></i> Add Program
+                        </button>
+                        <button class="btn btn-info" onclick="showBulkImportModal()">
+                            <i class="fas fa-file-import"></i> Bulk Import
+                        </button>
+                        <button class="btn btn-danger" id="deleteSelectedBtn" onclick="deleteSelected()" style="display: none;">
+                            <i class="fas fa-trash"></i> Delete Selected
+                        </button>
+                        <input type="text" class="form-control ms-auto" id="programSearchInput" placeholder="🔍 Search programs..." style="max-width: 300px;">
+                    </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="selectAllPrograms" onchange="toggleSelectAll()">
                         <label class="form-check-label" for="selectAllPrograms">
@@ -218,6 +221,11 @@
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control" id="programDesc" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">JSON URL (Optional - Fetch from GitHub)</label>
+                        <input type="url" class="form-control" id="programJsonUrl" placeholder="https://raw.githubusercontent.com/user/repo/main/program.json">
+                        <small class="text-muted">If provided, program data will be fetched from this URL instead of storing in Firebase</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Language</label>

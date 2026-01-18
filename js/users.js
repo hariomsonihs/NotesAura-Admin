@@ -234,6 +234,46 @@ window.viewUser = async function(userId) {
             console.error('Error loading payments:', error);
         }
         
+        // Load quiz progress
+        let quizProgressHtml = '<p class="text-muted">No quizzes completed</p>';
+        let quizCount = 0;
+        try {
+            const quizProgressSnapshot = await getDocs(query(collection(db, 'quiz_progress'), where('userId', '==', user.uid || userId)));
+            
+            if (!quizProgressSnapshot.empty) {
+                quizCount = quizProgressSnapshot.size;
+                quizProgressHtml = '<div class="list-group">';
+                quizProgressSnapshot.forEach(doc => {
+                    const progress = doc.data();
+                    const completedDate = progress.completedAt?.seconds ? new Date(progress.completedAt.seconds * 1000).toLocaleDateString() : 
+                                         progress.completedAt ? new Date(progress.completedAt).toLocaleDateString() : 'N/A';
+                    const percentage = progress.percentage || 0;
+                    const badgeColor = percentage >= 90 ? 'bg-success' : percentage >= 75 ? 'bg-primary' : percentage >= 60 ? 'bg-info' : 'bg-warning';
+                    
+                    quizProgressHtml += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${progress.quizSetName || 'Unknown Quiz'}</strong>
+                                    <span class="badge ${badgeColor} ms-2">${percentage}%</span>
+                                    <br>
+                                    <small class="text-muted">Category: ${progress.categoryName || 'N/A'} • ${progress.subcategoryName || 'N/A'}</small><br>
+                                    <small class="text-muted">Score: ${progress.correctAnswers || 0}/${progress.totalQuestions || 0}</small><br>
+                                    <small class="text-muted">Completed: ${completedDate}</small>
+                                </div>
+                                <button class="btn btn-sm btn-danger" onclick="resetQuizProgress('${userId}', '${doc.id}', '${progress.quizSetName}')" title="Reset Quiz">
+                                    <i class="fas fa-redo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                quizProgressHtml += '</div>';
+            }
+        } catch (error) {
+            console.error('Error loading quiz progress:', error);
+        }
+        
         const details = document.getElementById('userDetails');
         details.innerHTML = `
             <div class="row mb-3">
@@ -249,6 +289,7 @@ window.viewUser = async function(userId) {
                     <p><strong>Admin:</strong> ${user.admin === 'yes' ? '<span class="badge bg-danger">Yes</span>' : 'No'}</p>
                     <p><strong>Premium:</strong> ${user.premium ? '<span class="badge bg-warning">Yes</span>' : 'No'}</p>
                     <p><strong>Total Progress:</strong> ${user.totalProgress || 0}%</p>
+                    <p><strong>Quizzes Completed:</strong> ${quizCount}</p>
                     <p><strong>Joined:</strong> ${joinedDate}</p>
                 </div>
             </div>
@@ -266,6 +307,9 @@ window.viewUser = async function(userId) {
             <hr class="mt-3">
             <h6>⭐ Course Ratings</h6>
             ${ratingsHtml}
+            <hr class="mt-3">
+            <h6>📊 Quiz Progress</h6>
+            ${quizProgressHtml}
             <hr class="mt-3">
             <h6>Payment History</h6>
             ${paymentsHtml}
@@ -433,6 +477,20 @@ document.getElementById('courseSearchInput').addEventListener('input', (e) => {
     );
     displayCourses(filtered);
 });
+
+// Reset Quiz Progress
+window.resetQuizProgress = async function(userId, progressDocId, quizName) {
+    if (!confirm(`Are you sure you want to reset "${quizName}" for this user?\n\nThis will allow them to retake the quiz.`)) return;
+    
+    try {
+        await deleteDoc(doc(db, 'quiz_progress', progressDocId));
+        alert('Quiz progress reset successfully!');
+        viewUser(userId);
+    } catch (error) {
+        console.error('Error resetting quiz progress:', error);
+        alert('Error resetting quiz progress: ' + error.message);
+    }
+}
 
 // Initialize Auth Guard
 initAuthGuard();
